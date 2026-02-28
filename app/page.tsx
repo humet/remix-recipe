@@ -20,6 +20,7 @@ export default function Home() {
   const [savedRecipeId, setSavedRecipeId] = useState<string | undefined>(undefined)
   const [refreshKey, setRefreshKey] = useState(0)
   const [originalInput, setOriginalInput] = useState<string | undefined>(undefined)
+  const [isReimproved, setIsReimproved] = useState(false)
 
   // Step 1: Analyze the recipe and get suggestions
   const handleAnalyzeRecipe = async (
@@ -110,6 +111,7 @@ export default function Home() {
     setError(null)
     setSavedRecipeId(undefined)
     setOriginalInput(undefined)
+    setIsReimproved(false)
     setRefreshKey(prev => prev + 1)
   }
 
@@ -139,6 +141,7 @@ export default function Home() {
   const handleReimprove = () => {
     if (analysis) {
       setRecipe(null)
+      setIsReimproved(true)
       setAppState('suggestions')
     }
   }
@@ -156,6 +159,7 @@ export default function Home() {
         originalInput={originalInput}
         originalAnalysis={analysis}
         onReimprove={analysis ? handleReimprove : undefined}
+        isReimproved={isReimproved}
       />
     )
   }

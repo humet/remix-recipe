@@ -39,9 +39,10 @@ interface RecipeDisplayProps {
   originalInput?: string
   originalAnalysis?: RecipeAnalysis | null
   onReimprove?: () => void
+  isReimproved?: boolean
 }
 
-export function RecipeDisplay({ recipe: initialRecipe, onBack, savedRecipeId, onSaved, originalInput, originalAnalysis, onReimprove }: RecipeDisplayProps) {
+export function RecipeDisplay({ recipe: initialRecipe, onBack, savedRecipeId, onSaved, originalInput, originalAnalysis, onReimprove, isReimproved }: RecipeDisplayProps) {
   const [recipe, setRecipe] = useState(initialRecipe)
   const [currentStep, setCurrentStep] = useState(0)
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set())
@@ -119,16 +120,27 @@ export function RecipeDisplay({ recipe: initialRecipe, onBack, savedRecipeId, on
   const timerHook = useTimers()
 
   // Save state
-  const [isSaved, setIsSaved] = useState(!!savedRecipeId)
+  const [isSaved, setIsSaved] = useState(!!savedRecipeId && !isReimproved)
   const [isSaving, setIsSaving] = useState(false)
   const [currentSavedId, setCurrentSavedId] = useState<string | undefined>(savedRecipeId)
+  const [showSavePrompt, setShowSavePrompt] = useState(false)
 
-  const handleSave = async () => {
+  const handleSaveClick = () => {
+    // If this is a re-improved version of an existing recipe, ask what to do
+    if (isReimproved && savedRecipeId && !isSaved) {
+      setShowSavePrompt(true)
+    } else {
+      handleSave()
+    }
+  }
+
+  const handleSave = async (saveAsNew = false) => {
     setIsSaving(true)
+    setShowSavePrompt(false)
     const supabase = createClient()
     
     try {
-      if (currentSavedId) {
+      if (currentSavedId && !saveAsNew) {
         // Update existing
         await supabase
           .from('saved_recipes')
@@ -441,7 +453,7 @@ export function RecipeDisplay({ recipe: initialRecipe, onBack, savedRecipeId, on
           </button>
           <h1 className="flex-1 text-lg font-semibold text-foreground truncate">{recipe.title}</h1>
           <button
-            onClick={handleSave}
+            onClick={handleSaveClick}
             disabled={isSaving}
             className={`flex h-10 w-10 items-center justify-center rounded-full glass hover:scale-105 active:scale-95 transition-all ${
               isSaved ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
@@ -734,6 +746,40 @@ export function RecipeDisplay({ recipe: initialRecipe, onBack, savedRecipeId, on
 
       {/* Swapping Overlay */}
       <ProcessingOverlay type="swapping" isVisible={isSwapping} />
+
+      {/* Save Prompt Modal */}
+      {showSavePrompt && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 animate-fade-in">
+          <div className="w-full max-w-lg p-5 pb-10 glass-strong rounded-t-3xl animate-slide-up">
+            <h3 className="text-lg font-semibold text-foreground text-center mb-2">Save Recipe</h3>
+            <p className="text-sm text-muted-foreground text-center mb-6">
+              This is a new version with different improvements. How would you like to save it?
+            </p>
+            <div className="flex flex-col gap-3">
+              <Button
+                onClick={() => handleSave(false)}
+                className="w-full h-14 rounded-2xl bg-gradient-to-r from-primary to-accent"
+              >
+                Update existing recipe
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => handleSave(true)}
+                className="w-full h-14 rounded-2xl glass border-0"
+              >
+                Save as new recipe
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => setShowSavePrompt(false)}
+                className="w-full h-12 rounded-2xl text-muted-foreground"
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
