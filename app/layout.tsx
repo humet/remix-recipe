@@ -53,6 +53,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="bg-background">
       <body className={`${inter.variable} ${playfair.variable} font-sans antialiased`}>
+        <div className="gradient-bg" aria-hidden="true" />
         {children}
         <Analytics />
       </body>
