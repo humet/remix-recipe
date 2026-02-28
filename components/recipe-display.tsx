@@ -28,12 +28,14 @@ import {
   Timer,
   Bookmark,
   BookmarkCheck,
-  Wand2
+  Wand2,
+  Home
 } from 'lucide-react'
 
 interface RecipeDisplayProps {
   recipe: ImprovedRecipe
   onBack: () => void
+  onHome: () => void
   savedRecipeId?: string
   onSaved?: (id: string) => void
   originalInput?: string
@@ -42,7 +44,7 @@ interface RecipeDisplayProps {
   isReimproved?: boolean
 }
 
-export function RecipeDisplay({ recipe: initialRecipe, onBack, savedRecipeId, onSaved, originalInput, originalAnalysis, onReimprove, isReimproved }: RecipeDisplayProps) {
+export function RecipeDisplay({ recipe: initialRecipe, onBack, onHome, savedRecipeId, onSaved, originalInput, originalAnalysis, onReimprove, isReimproved }: RecipeDisplayProps) {
   const [recipe, setRecipe] = useState(initialRecipe)
   const [currentStep, setCurrentStep] = useState(0)
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set())
@@ -452,6 +454,13 @@ export function RecipeDisplay({ recipe: initialRecipe, onBack, savedRecipeId, on
             <ArrowLeft className="h-5 w-5" />
           </button>
           <h1 className="flex-1 text-lg font-semibold text-foreground truncate">{recipe.title}</h1>
+          <button
+            onClick={onHome}
+            className="flex h-10 w-10 items-center justify-center rounded-full glass text-muted-foreground hover:text-foreground hover:scale-105 active:scale-95 transition-all"
+            aria-label="Go home"
+          >
+            <Home className="h-5 w-5" />
+          </button>
           <button
             onClick={handleSaveClick}
             disabled={isSaving}

@@ -17,7 +17,8 @@ import {
   Palette,
   Check,
   Wand2,
-  MessageSquare
+  MessageSquare,
+  Home
 } from 'lucide-react'
 
 interface ImprovementSuggestionsProps {
@@ -25,6 +26,7 @@ interface ImprovementSuggestionsProps {
   onApply: (selectedImprovements: SuggestedImprovement[], customRequest: string) => void
   onSkip: () => void
   onBack: () => void
+  onHome: () => void
   isLoading: boolean
 }
 
@@ -50,12 +52,13 @@ const categoryColors: Record<SuggestedImprovement['category'], string> = {
   presentation: 'bg-pink-500/10 text-pink-600 border-pink-500/20',
 }
 
-export function ImprovementSuggestions({ 
-  analysis, 
-  onApply, 
-  onSkip, 
+export function ImprovementSuggestions({
+  analysis,
+  onApply,
+  onSkip,
   onBack,
-  isLoading 
+  onHome,
+  isLoading
 }: ImprovementSuggestionsProps) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [customRequest, setCustomRequest] = useState('')
@@ -85,7 +88,7 @@ export function ImprovementSuggestions({
   return (
     <main className="min-h-screen bg-background">
       {/* Header */}
-      <header className="sticky top-0 z-10 glass-strong border-b-0">
+<header className="sticky top-0 z-10 glass-strong border-b-0">
         <div className="flex items-center gap-3 px-5 py-4">
           <button
             onClick={onBack}
@@ -102,6 +105,13 @@ export function ImprovementSuggestions({
               Choose improvements to apply
             </p>
           </div>
+          <button
+            onClick={onHome}
+            className="h-11 w-11 flex items-center justify-center rounded-full glass text-muted-foreground hover:text-foreground hover:scale-105 active:scale-95 transition-all"
+            aria-label="Go home"
+          >
+            <Home className="h-5 w-5" />
+          </button>
         </div>
       </header>
 

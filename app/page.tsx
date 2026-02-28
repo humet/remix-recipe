@@ -154,6 +154,7 @@ export default function Home() {
       <RecipeDisplay
         recipe={recipe}
         onBack={analysis ? handleBackToSuggestions : handleBackToInput}
+        onHome={handleBackToInput}
         savedRecipeId={savedRecipeId}
         onSaved={handleRecipeSaved}
         originalInput={originalInput}
@@ -173,6 +174,7 @@ export default function Home() {
           onApply={handleApplyImprovements}
           onSkip={handleSkipImprovements}
           onBack={handleBackToInput}
+          onHome={handleBackToInput}
           isLoading={isLoading}
         />
       </>
