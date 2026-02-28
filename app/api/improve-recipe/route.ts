@@ -24,7 +24,7 @@ const improvedRecipeSchema = z.object({
     })
   ).describe('Step-by-step instructions with inline measurements'),
   proTips: z.array(z.string()).describe('2-3 professional tips to elevate the dish'),
-  improvements: z.array(z.string()).describe('3-5 brief bullet points summarizing the key improvements made to the original recipe, such as clarified instructions, better techniques, adjusted proportions, or added tips'),
+  improvements: z.array(z.string()).describe('ONLY list actual recipe changes like ingredient swaps, taste adjustments, health modifications, or technique changes. Do NOT include formatting or structural changes. Leave empty array if no actual recipe changes were made.'),
 })
 
 export async function POST(req: Request) {
@@ -54,7 +54,7 @@ CRITICAL REQUIREMENTS:
 4. Add helpful tips where appropriate.
 ${hasImprovements ? improvementInstructions : ''}
 
-${hasImprovements ? `\nIn the "improvements" field, list the specific changes you made based on the requested improvements above.` : `\nIn the "improvements" field, note any clarifications or formatting improvements you made to the original recipe (no taste/ingredient changes were requested).`}
+${hasImprovements ? `\nIn the "improvements" field, list ONLY the specific recipe changes you made (ingredient swaps, taste adjustments, health modifications, technique changes). Do NOT list formatting or structural changes.` : `\nThe user did not request any recipe changes. Return an EMPTY array for the "improvements" field since no actual recipe modifications were made.`}
 
 Recipe to process:
 ${parsedRecipe}`
