@@ -19,6 +19,7 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null)
   const [savedRecipeId, setSavedRecipeId] = useState<string | undefined>(undefined)
   const [refreshKey, setRefreshKey] = useState(0)
+  const [originalInput, setOriginalInput] = useState<string | undefined>(undefined)
 
   // Step 1: Analyze the recipe and get suggestions
   const handleAnalyzeRecipe = async (
@@ -27,6 +28,7 @@ export default function Home() {
   ) => {
     setProcessingType('analyzing')
     setError(null)
+    setOriginalInput(text || (images.length > 0 ? '[Image input]' : ''))
 
     try {
       const response = await fetch('/api/analyze-recipe', {
@@ -107,12 +109,20 @@ export default function Home() {
     setRecipe(null)
     setError(null)
     setSavedRecipeId(undefined)
+    setOriginalInput(undefined)
     setRefreshKey(prev => prev + 1)
   }
 
-  const handleSelectSavedRecipe = (recipe: ImprovedRecipe, savedId: string) => {
+  const handleSelectSavedRecipe = (
+    recipe: ImprovedRecipe,
+    savedId: string,
+    origInput?: string,
+    origAnalysis?: RecipeAnalysis
+  ) => {
     setRecipe(recipe)
     setSavedRecipeId(savedId)
+    setOriginalInput(origInput)
+    setAnalysis(origAnalysis || null)
     setAppState('result')
   }
 
@@ -136,6 +146,8 @@ export default function Home() {
         onBack={analysis ? handleBackToSuggestions : handleBackToInput}
         savedRecipeId={savedRecipeId}
         onSaved={handleRecipeSaved}
+        originalInput={originalInput}
+        originalAnalysis={analysis}
       />
     )
   }

@@ -2,18 +2,20 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { ImprovedRecipe } from '@/lib/recipe-types'
+import { ImprovedRecipe, RecipeAnalysis } from '@/lib/recipe-types'
 import { Clock, Users, ChefHat, Trash2, Loader2 } from 'lucide-react'
 
 interface SavedRecipe {
   id: string
   title: string
   recipe_data: ImprovedRecipe
+  original_input?: string
+  original_analysis?: RecipeAnalysis
   created_at: string
 }
 
 interface SavedRecipesProps {
-  onSelect: (recipe: ImprovedRecipe, savedId: string) => void
+  onSelect: (recipe: ImprovedRecipe, savedId: string, originalInput?: string, originalAnalysis?: RecipeAnalysis) => void
 }
 
 export function SavedRecipes({ onSelect }: SavedRecipesProps) {
@@ -75,7 +77,7 @@ export function SavedRecipes({ onSelect }: SavedRecipesProps) {
           return (
             <button
               key={saved.id}
-              onClick={() => onSelect(recipe, saved.id)}
+              onClick={() => onSelect(recipe, saved.id, saved.original_input, saved.original_analysis)}
               className="w-full text-left glass rounded-2xl p-4 hover:ring-2 hover:ring-primary/30 transition-all active:scale-[0.98]"
             >
               <div className="flex justify-between items-start gap-3">

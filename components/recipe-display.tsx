@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { ImprovedRecipe, Ingredient } from '@/lib/recipe-types'
+import { ImprovedRecipe, Ingredient, RecipeAnalysis } from '@/lib/recipe-types'
 import { Button } from '@/components/ui/button'
 import { ProcessingOverlay } from '@/components/processing-overlay'
 import { IngredientSwapSheet } from '@/components/ingredient-swap-sheet'
@@ -35,9 +35,11 @@ interface RecipeDisplayProps {
   onBack: () => void
   savedRecipeId?: string
   onSaved?: (id: string) => void
+  originalInput?: string
+  originalAnalysis?: RecipeAnalysis | null
 }
 
-export function RecipeDisplay({ recipe: initialRecipe, onBack, savedRecipeId, onSaved }: RecipeDisplayProps) {
+export function RecipeDisplay({ recipe: initialRecipe, onBack, savedRecipeId, onSaved, originalInput, originalAnalysis }: RecipeDisplayProps) {
   const [recipe, setRecipe] = useState(initialRecipe)
   const [currentStep, setCurrentStep] = useState(0)
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set())
@@ -131,6 +133,8 @@ export function RecipeDisplay({ recipe: initialRecipe, onBack, savedRecipeId, on
           .update({ 
             title: recipe.title,
             recipe_data: recipe,
+            original_input: originalInput,
+            original_analysis: originalAnalysis,
             updated_at: new Date().toISOString()
           })
           .eq('id', currentSavedId)
@@ -140,7 +144,9 @@ export function RecipeDisplay({ recipe: initialRecipe, onBack, savedRecipeId, on
           .from('saved_recipes')
           .insert({ 
             title: recipe.title,
-            recipe_data: recipe
+            recipe_data: recipe,
+            original_input: originalInput,
+            original_analysis: originalAnalysis
           })
           .select('id')
           .single()
