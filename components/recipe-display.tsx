@@ -580,6 +580,21 @@ export function RecipeDisplay({ recipe: initialRecipe, onBack }: RecipeDisplayPr
           <ChevronRight className="h-5 w-5 ml-1" />
         </Button>
       </div>
+
+      {/* Ingredient Swap Sheet */}
+      {selectedIngredient && (
+        <IngredientSwapSheet
+          isOpen={swapSheetOpen}
+          onClose={() => setSwapSheetOpen(false)}
+          ingredient={selectedIngredient}
+          recipeContext={getRecipeContext()}
+          onSwap={handleSwap}
+          isSwapping={isSwapping}
+        />
+      )}
+
+      {/* Swapping Overlay */}
+      <ProcessingOverlay type="swapping" isVisible={isSwapping} />
     </div>
   )
 }

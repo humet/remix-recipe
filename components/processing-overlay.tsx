@@ -1,9 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { ChefHat, Sparkles, Scale, BookOpen } from 'lucide-react'
+import { ChefHat, Sparkles, Scale, BookOpen, RefreshCw } from 'lucide-react'
 
-type ProcessingType = 'analyzing' | 'improving' | 'scaling'
+type ProcessingType = 'analyzing' | 'improving' | 'scaling' | 'swapping'
 
 interface ProcessingOverlayProps {
   type: ProcessingType
@@ -46,6 +46,16 @@ const processingConfig: Record<ProcessingType, {
       'Adjusting measurements...',
       'Checking cooking times...',
       'Finalizing recipe...',
+    ],
+  },
+  swapping: {
+    icon: RefreshCw,
+    title: 'Swapping Ingredient',
+    messages: [
+      'Finding the best substitute...',
+      'Updating measurements...',
+      'Adjusting the method...',
+      'Finalizing changes...',
     ],
   },
 }
