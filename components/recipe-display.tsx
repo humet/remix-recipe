@@ -13,7 +13,12 @@ import {
   ChevronRight,
   ChevronLeft,
   RotateCcw,
-  Sparkles
+  Sparkles,
+  Minus,
+  Plus,
+  Loader2,
+  X,
+  Info
 } from 'lucide-react'
 
 interface RecipeDisplayProps {
@@ -21,10 +26,62 @@ interface RecipeDisplayProps {
   onBack: () => void
 }
 
-export function RecipeDisplay({ recipe, onBack }: RecipeDisplayProps) {
+export function RecipeDisplay({ recipe: initialRecipe, onBack }: RecipeDisplayProps) {
+  const [recipe, setRecipe] = useState(initialRecipe)
   const [currentStep, setCurrentStep] = useState(0)
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set())
   const [view, setView] = useState<'overview' | 'cooking'>('overview')
+  
+  // Portion scaling state
+  const [isScaling, setIsScaling] = useState(false)
+  const [scalingNotes, setScalingNotes] = useState<string[] | null>(null)
+  const [showScalingNotes, setShowScalingNotes] = useState(false)
+  
+  // Parse current servings number for the adjuster
+  const parseServings = (servingsStr: string): number => {
+    const match = servingsStr.match(/\d+/)
+    return match ? parseInt(match[0], 10) : 4
+  }
+  
+  const [targetServings, setTargetServings] = useState(() => parseServings(recipe.servings))
+  const originalServings = parseServings(initialRecipe.servings)
+
+  const handleScaleRecipe = async (newServings: number) => {
+    if (newServings < 1 || newServings > 50) return
+    setTargetServings(newServings)
+    
+    // If returning to original, just reset
+    if (newServings === originalServings) {
+      setRecipe(initialRecipe)
+      setScalingNotes(null)
+      return
+    }
+    
+    setIsScaling(true)
+    try {
+      const response = await fetch('/api/scale-recipe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipe: initialRecipe,
+          newServings: `${newServings} servings`,
+        }),
+      })
+      
+      if (!response.ok) throw new Error('Failed to scale')
+      
+      const data = await response.json()
+      setRecipe(data.scaledRecipe)
+      setScalingNotes(data.scalingNotes)
+      setShowScalingNotes(true)
+    } catch (error) {
+      console.error('Error scaling recipe:', error)
+      // Reset to previous state
+      setTargetServings(parseServings(recipe.servings))
+    } finally {
+      setIsScaling(false)
+    }
+  }
 
   const toggleStepComplete = (stepIndex: number) => {
     const newCompleted = new Set(completedSteps)
@@ -228,6 +285,40 @@ export function RecipeDisplay({ recipe, onBack }: RecipeDisplayProps) {
             </div>
           )}
 
+          {/* Scaling Notes */}
+          {scalingNotes && scalingNotes.length > 0 && showScalingNotes && (
+            <div className="flex flex-col gap-3 p-4 bg-amber-50 dark:bg-amber-950/30 rounded-xl border border-amber-200 dark:border-amber-800">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Info className="h-5 w-5 text-amber-600 dark:text-amber-500" />
+                  <h3 className="font-semibold text-amber-900 dark:text-amber-100">Scaling Notes</h3>
+                </div>
+                <button
+                  onClick={() => setShowScalingNotes(false)}
+                  className="h-6 w-6 flex items-center justify-center rounded-full text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900"
+                  aria-label="Dismiss scaling notes"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <ul className="flex flex-col gap-1.5">
+                {scalingNotes.map((note, index) => (
+                  <li key={index} className="text-sm text-amber-800 dark:text-amber-200 leading-relaxed">
+                    {note}
+                  </li>
+                ))}
+              </ul>
+              {targetServings !== originalServings && (
+                <button
+                  onClick={() => handleScaleRecipe(originalServings)}
+                  className="text-xs text-amber-700 dark:text-amber-300 underline underline-offset-2 self-start"
+                >
+                  Reset to original ({originalServings} servings)
+                </button>
+              )}
+            </div>
+          )}
+
           {/* Meta Info */}
           <div className="grid grid-cols-2 gap-3">
             <div className="flex items-center gap-3 p-3 bg-card rounded-xl border border-border">
@@ -244,11 +335,39 @@ export function RecipeDisplay({ recipe, onBack }: RecipeDisplayProps) {
                 <p className="text-sm font-medium text-foreground">{recipe.cookTime}</p>
               </div>
             </div>
-            <div className="flex items-center gap-3 p-3 bg-card rounded-xl border border-border">
-              <Users className="h-5 w-5 text-primary" />
-              <div>
-                <p className="text-xs text-muted-foreground">Servings</p>
-                <p className="text-sm font-medium text-foreground">{recipe.servings}</p>
+            <div className="flex items-center justify-between p-3 bg-card rounded-xl border border-border">
+              <div className="flex items-center gap-3">
+                <Users className="h-5 w-5 text-primary" />
+                <div>
+                  <p className="text-xs text-muted-foreground">Servings</p>
+                  <p className="text-sm font-medium text-foreground">
+                    {targetServings !== originalServings && (
+                      <span className="text-muted-foreground line-through mr-1">{originalServings}</span>
+                    )}
+                    {targetServings}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => handleScaleRecipe(targetServings - 1)}
+                  disabled={isScaling || targetServings <= 1}
+                  className="h-9 w-9 flex items-center justify-center rounded-full bg-secondary text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
+                  aria-label="Decrease servings"
+                >
+                  <Minus className="h-4 w-4" />
+                </button>
+                <span className="w-8 text-center font-semibold text-foreground">
+                  {isScaling ? <Loader2 className="h-4 w-4 animate-spin mx-auto" /> : targetServings}
+                </span>
+                <button
+                  onClick={() => handleScaleRecipe(targetServings + 1)}
+                  disabled={isScaling || targetServings >= 50}
+                  className="h-9 w-9 flex items-center justify-center rounded-full bg-secondary text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
+                  aria-label="Increase servings"
+                >
+                  <Plus className="h-4 w-4" />
+                </button>
               </div>
             </div>
             <div className="flex items-center gap-3 p-3 bg-card rounded-xl border border-border">
