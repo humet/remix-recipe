@@ -5,15 +5,20 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { ChefHat, ImagePlus, Sparkles, X, Clipboard } from 'lucide-react'
 
+interface ImageData {
+  base64: string
+  mediaType: string
+  preview: string
+}
+
 interface RecipeInputProps {
-  onImprove: (text: string, imageData: { base64: string; mediaType: string } | null) => void
+  onImprove: (text: string, images: { base64: string; mediaType: string }[]) => void
   isLoading: boolean
 }
 
 export function RecipeInput({ onImprove, isLoading }: RecipeInputProps) {
   const [recipeText, setRecipeText] = useState('')
-  const [imagePreview, setImagePreview] = useState<string | null>(null)
-  const [imageData, setImageData] = useState<{ base64: string; mediaType: string } | null>(null)
+  const [images, setImages] = useState<ImageData[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleImageUpload = useCallback((file: File) => {
@@ -22,54 +27,61 @@ export function RecipeInput({ onImprove, isLoading }: RecipeInputProps) {
     const reader = new FileReader()
     reader.onload = (e) => {
       const result = e.target?.result as string
-      setImagePreview(result)
-      // Extract base64 data without the data URL prefix
       const base64 = result.split(',')[1]
-      setImageData({ base64, mediaType: file.type })
+      setImages(prev => [...prev, { 
+        base64, 
+        mediaType: file.type,
+        preview: result 
+      }])
     }
     reader.readAsDataURL(file)
   }, [])
 
   const handlePaste = useCallback((e: React.ClipboardEvent) => {
     const items = e.clipboardData.items
+    let hasImage = false
     for (const item of items) {
       if (item.type.startsWith('image/')) {
         const file = item.getAsFile()
         if (file) {
           handleImageUpload(file)
-          e.preventDefault()
-          return
+          hasImage = true
         }
       }
+    }
+    if (hasImage) {
+      e.preventDefault()
     }
   }, [handleImageUpload])
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault()
-    const file = e.dataTransfer.files[0]
-    if (file) {
-      handleImageUpload(file)
-    }
+    const files = Array.from(e.dataTransfer.files)
+    files.forEach(file => {
+      if (file.type.startsWith('image/')) {
+        handleImageUpload(file)
+      }
+    })
   }, [handleImageUpload])
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
+    const files = Array.from(e.target.files || [])
+    files.forEach(file => {
       handleImageUpload(file)
-    }
-  }
-
-  const removeImage = () => {
-    setImagePreview(null)
-    setImageData(null)
+    })
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
   }
 
+  const removeImage = (index: number) => {
+    setImages(prev => prev.filter((_, i) => i !== index))
+  }
+
   const handleSubmit = () => {
-    if (!recipeText.trim() && !imageData) return
-    onImprove(recipeText, imageData)
+    if (!recipeText.trim() && images.length === 0) return
+    const imageDataArray = images.map(({ base64, mediaType }) => ({ base64, mediaType }))
+    onImprove(recipeText, imageDataArray)
   }
 
   const handlePasteFromClipboard = async () => {
@@ -103,21 +115,42 @@ export function RecipeInput({ onImprove, isLoading }: RecipeInputProps) {
         onDrop={handleDrop}
         onDragOver={(e) => e.preventDefault()}
       >
-        {/* Image Preview */}
-        {imagePreview && (
-          <div className="relative">
-            <img 
-              src={imagePreview} 
-              alt="Recipe preview" 
-              className="w-full max-h-48 object-cover rounded-xl border border-border"
-            />
-            <button
-              onClick={removeImage}
-              className="absolute top-2 right-2 h-8 w-8 flex items-center justify-center rounded-full bg-background/90 backdrop-blur-sm border border-border text-foreground"
-              aria-label="Remove image"
-            >
-              <X className="h-4 w-4" />
-            </button>
+        {/* Image Previews */}
+        {images.length > 0 && (
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-foreground">
+                {images.length} {images.length === 1 ? 'image' : 'images'} added
+              </span>
+              <button
+                onClick={() => setImages([])}
+                className="text-xs text-muted-foreground hover:text-destructive transition-colors"
+                type="button"
+              >
+                Remove all
+              </button>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {images.map((img, index) => (
+                <div key={index} className="relative aspect-square">
+                  <img 
+                    src={img.preview} 
+                    alt={`Recipe image ${index + 1}`} 
+                    className="w-full h-full object-cover rounded-lg border border-border"
+                  />
+                  <button
+                    onClick={() => removeImage(index)}
+                    className="absolute -top-1.5 -right-1.5 h-6 w-6 flex items-center justify-center rounded-full bg-background border border-border text-foreground shadow-sm"
+                    aria-label={`Remove image ${index + 1}`}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                  <span className="absolute bottom-1 left-1 text-xs font-medium bg-background/80 backdrop-blur-sm px-1.5 py-0.5 rounded text-foreground">
+                    {index + 1}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
@@ -144,6 +177,7 @@ export function RecipeInput({ onImprove, isLoading }: RecipeInputProps) {
           ref={fileInputRef}
           type="file"
           accept="image/*"
+          multiple
           onChange={handleFileSelect}
           className="hidden"
         />
@@ -154,13 +188,15 @@ export function RecipeInput({ onImprove, isLoading }: RecipeInputProps) {
           type="button"
         >
           <ImagePlus className="h-5 w-5" />
-          <span className="text-sm font-medium">Add recipe image</span>
+          <span className="text-sm font-medium">
+            {images.length > 0 ? 'Add more images' : 'Add recipe images'}
+          </span>
         </button>
 
         {/* Improve Button */}
         <Button
           onClick={handleSubmit}
-          disabled={isLoading || (!recipeText.trim() && !imageData)}
+          disabled={isLoading || (!recipeText.trim() && images.length === 0)}
           size="lg"
           className="h-14 rounded-xl text-base font-semibold gap-2"
         >

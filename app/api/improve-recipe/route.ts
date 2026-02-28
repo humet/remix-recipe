@@ -29,7 +29,10 @@ const improvedRecipeSchema = z.object({
 
 export async function POST(req: Request) {
   try {
-    const { recipeText, imageData } = await req.json()
+    const { recipeText, images } = await req.json() as { 
+      recipeText: string
+      images: { base64: string; mediaType: string }[] 
+    }
 
     const messages: Array<{ role: 'user'; content: Array<{ type: string; text?: string; image?: string; mediaType?: string }> }> = [
       {
@@ -38,19 +41,28 @@ export async function POST(req: Request) {
       },
     ]
 
-    // Add image if provided
-    if (imageData) {
-      messages[0].content.push({
-        type: 'image',
-        image: imageData.base64,
-        mediaType: imageData.mediaType || 'image/jpeg',
-      })
+    // Add all images if provided
+    if (images && images.length > 0) {
+      for (const img of images) {
+        messages[0].content.push({
+          type: 'image',
+          image: img.base64,
+          mediaType: img.mediaType || 'image/jpeg',
+        })
+      }
     }
+
+    const hasImages = images && images.length > 0
+    const imageCountText = hasImages 
+      ? `${images.length} image${images.length > 1 ? 's' : ''} provided` 
+      : ''
 
     // Add text prompt
     messages[0].content.push({
       type: 'text',
       text: `You are an expert chef and recipe writer. Analyze the following recipe and improve it into a clear, user-friendly format.
+
+${hasImages ? `I've provided ${imageCountText} of the recipe. Please combine all the information from the images into a single cohesive recipe.` : ''}
 
 CRITICAL REQUIREMENTS:
 1. In EVERY step instruction, when you mention an ingredient, you MUST include the measurement in parentheses right after the ingredient name. For example: "Add the butter (50g) to the pan" or "Mix in the flour (2 cups) with the sugar (100g)".
@@ -58,8 +70,9 @@ CRITICAL REQUIREMENTS:
 3. Make instructions clear and beginner-friendly.
 4. Add helpful tips where appropriate.
 5. Improve the recipe with professional techniques if possible.
+${hasImages && images.length > 1 ? '6. If the images show different parts of the same recipe (e.g., ingredients list and method), combine them into one complete recipe.' : ''}
 
-${recipeText ? `Recipe to improve:\n${recipeText}` : 'Please extract and improve the recipe from the image provided.'}`,
+${recipeText ? `Recipe text to improve:\n${recipeText}` : hasImages ? 'Please extract and improve the recipe from the images provided.' : ''}`,
     })
 
     const { output } = await generateText({

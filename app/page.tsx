@@ -12,7 +12,7 @@ export default function Home() {
 
   const handleImproveRecipe = async (
     text: string,
-    imageData: { base64: string; mediaType: string } | null
+    images: { base64: string; mediaType: string }[]
   ) => {
     setIsLoading(true)
     setError(null)
@@ -25,7 +25,7 @@ export default function Home() {
         },
         body: JSON.stringify({
           recipeText: text,
-          imageData,
+          images,
         }),
       })
 
