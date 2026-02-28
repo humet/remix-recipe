@@ -7,6 +7,8 @@ import { ProcessingOverlay } from '@/components/processing-overlay'
 import { IngredientSwapSheet } from '@/components/ingredient-swap-sheet'
 import { TimerBar } from '@/components/timer-bar'
 import { useTimers } from '@/hooks/use-timers'
+import { createClient } from '@/lib/supabase/client'
+import { useRouter } from 'next/navigation'
 import { 
   ArrowLeft, 
   Clock, 
@@ -24,7 +26,9 @@ import {
   Info,
   Loader2,
   RefreshCw,
-  Timer
+  Timer,
+  Bookmark,
+  BookmarkCheck
 } from 'lucide-react'
 
 interface RecipeDisplayProps {
