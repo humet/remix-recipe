@@ -105,7 +105,7 @@ export function ImprovementSuggestions({
         </div>
       </header>
 
-      <div className="flex flex-col gap-6 p-5 pb-36">
+      <div className="flex flex-col gap-6 p-5 pb-52">
         {/* Recipe Summary */}
         <div className="flex flex-col gap-2 p-4 glass rounded-2xl">
           <p className="text-sm text-muted-foreground leading-relaxed">{analysis.summary}</p>

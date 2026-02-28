@@ -88,7 +88,7 @@ export function ProcessingOverlay({ type, isVisible }: ProcessingOverlayProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-xl">
-      <div className="flex flex-col items-center gap-8 p-10 max-w-sm text-center glass-strong rounded-3xl mx-6">
+      <div className="flex flex-col items-center gap-8 p-10 w-[320px] text-center glass-strong rounded-3xl mx-6">
         {/* Animated Icon Container */}
         <div className="relative">
           {/* Pulsing ring */}
@@ -118,10 +118,10 @@ export function ProcessingOverlay({ type, isVisible }: ProcessingOverlayProps) {
         </h2>
 
         {/* Rotating message */}
-        <div className="h-12 flex items-center">
+        <div className="h-12 flex items-center justify-center w-full">
           <p 
             key={messageIndex}
-            className="text-muted-foreground animate-fade-in"
+            className="text-muted-foreground animate-fade-in text-center"
           >
             {config.messages[messageIndex]}
           </p>
