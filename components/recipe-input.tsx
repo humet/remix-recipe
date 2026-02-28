@@ -103,8 +103,8 @@ export function RecipeInput({ onImprove, isLoading }: RecipeInputProps) {
           <ChefHat className="h-10 w-10" />
         </div>
         <div className="text-center">
-          <h1 className="text-3xl font-semibold text-foreground tracking-tight">RecipeAI</h1>
-          <p className="text-sm text-muted-foreground mt-1">Transform any recipe into an easy guide</p>
+          <h1 className="text-3xl font-semibold text-foreground tracking-tight">Remix</h1>
+          <p className="text-sm text-muted-foreground mt-1">Remix any recipe to make it yours</p>
         </div>
       </div>
 

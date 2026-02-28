@@ -1,7 +1,7 @@
 {
-  "name": "RecipeAI - Smart Recipe Improver",
-  "short_name": "RecipeAI",
-  "description": "Transform any recipe into an easy-to-follow cooking guide",
+  "name": "Remix - Recipe Remixer",
+  "short_name": "Remix",
+  "description": "Remix any recipe with AI - make it healthier, tastier, or perfectly suited to your kitchen",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#faf8f5",

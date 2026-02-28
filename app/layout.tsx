@@ -10,8 +10,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'RecipeAI - Smart Recipe Improver',
-  description: 'Transform any recipe into an easy-to-follow cooking guide with AI-powered improvements and inline measurements',
+  title: 'Remix - Recipe Remixer',
+  description: 'Remix any recipe with AI - make it healthier, tastier, or perfectly suited to your kitchen',
   generator: 'v0.app',
   manifest: '/manifest.json',
   icons: {
