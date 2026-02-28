@@ -1,4 +1,5 @@
 import { generateText, Output } from 'ai'
+import { openai } from '@ai-sdk/openai'
 import { z } from 'zod'
 
 const analysisSchema = z.object({
@@ -68,7 +69,7 @@ ${recipeText ? `Recipe to analyze:\n${recipeText}` : 'Please extract and analyze
     })
 
     const { output } = await generateText({
-      model: 'openai/gpt-4o',
+      model: openai('gpt-4o'),
       output: Output.object({
         schema: analysisSchema,
       }),

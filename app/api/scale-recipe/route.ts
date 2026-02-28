@@ -1,4 +1,5 @@
 import { generateText, Output } from 'ai'
+import { openai } from '@ai-sdk/openai'
 import { z } from 'zod'
 
 const scaledRecipeSchema = z.object({
@@ -46,7 +47,7 @@ ${recipe.steps.map((s: { stepNumber: number; instruction: string; timing: string
 Scale to: ${newServings} servings`
 
     const { output } = await generateText({
-      model: 'openai/gpt-4o',
+      model: openai('gpt-4o'),
       output: Output.object({
         schema: scaledRecipeSchema,
       }),
