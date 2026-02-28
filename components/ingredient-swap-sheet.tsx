@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { X, Loader2, ArrowRight, Sparkles, MessageSquare } from 'lucide-react'
+import { X, Loader2, ArrowRight, Sparkles, MessageSquare, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Ingredient } from '@/lib/recipe-types'
@@ -18,6 +18,7 @@ interface IngredientSwapSheetProps {
   recipeContext: string
   onClose: () => void
   onSwap: (original: Ingredient, replacement: { name: string; amount: string }) => void
+  onRemove: (ingredient: Ingredient) => void
   isApplying: boolean
 }
 
@@ -27,6 +28,7 @@ export function IngredientSwapSheet({
   recipeContext,
   onClose,
   onSwap,
+  onRemove,
   isApplying,
 }: IngredientSwapSheetProps) {
   const [alternatives, setAlternatives] = useState<Alternative[]>([])
@@ -88,6 +90,11 @@ export function IngredientSwapSheet({
       name: customIngredient.trim(), 
       amount: customAmount.trim() || ingredient.amount 
     })
+  }
+
+  const handleRemove = () => {
+    if (!ingredient || isApplying) return
+    onRemove(ingredient)
   }
 
   if (!isOpen) return null
@@ -174,16 +181,25 @@ export function IngredientSwapSheet({
                   ))}
                 </div>
                 
-                {/* Custom Input */}
+                {/* Custom Input & Remove */}
                 <div className="flex flex-col gap-3 pt-2">
                   {!showCustom ? (
-                    <button
-                      onClick={() => setShowCustom(true)}
-                      className="flex items-center justify-center gap-2 py-4 rounded-2xl border-2 border-dashed border-border/50 glass-subtle text-muted-foreground hover:border-primary/50 hover:text-primary transition-all"
-                    >
-                      <MessageSquare className="h-5 w-5" />
-                      <span className="text-sm font-medium">Use something else</span>
-                    </button>
+                    <div className="flex flex-col gap-2">
+                      <button
+                        onClick={() => setShowCustom(true)}
+                        className="flex items-center justify-center gap-2 py-4 rounded-2xl border-2 border-dashed border-border/50 glass-subtle text-muted-foreground hover:border-primary/50 hover:text-primary transition-all"
+                      >
+                        <MessageSquare className="h-5 w-5" />
+                        <span className="text-sm font-medium">Use something else</span>
+                      </button>
+                      <button
+                        onClick={handleRemove}
+                        className="flex items-center justify-center gap-2 py-4 rounded-2xl border-2 border-dashed border-destructive/30 glass-subtle text-muted-foreground hover:border-destructive/50 hover:text-destructive transition-all"
+                      >
+                        <Trash2 className="h-5 w-5" />
+                        <span className="text-sm font-medium">I don't have any - remove it</span>
+                      </button>
+                    </div>
                   ) : (
                     <div className="flex flex-col gap-3 p-4 glass rounded-2xl">
                       <div className="flex items-center gap-2">

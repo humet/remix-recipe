@@ -120,6 +120,7 @@ export function RecipeDisplay({ recipe: initialRecipe, onBack }: RecipeDisplayPr
 
   const handleSwap = async (original: Ingredient, replacement: { name: string; amount: string }) => {
     setIsSwapping(true)
+    setSwapSheetOpen(false)
     
     try {
       const response = await fetch('/api/apply-swap', {
@@ -145,10 +146,42 @@ export function RecipeDisplay({ recipe: initialRecipe, onBack }: RecipeDisplayPr
       if (data.swapNote) {
         setSwapNotes(prev => [...prev, data.swapNote])
       }
-      
-      setSwapSheetOpen(false)
     } catch (error) {
       console.error('Error applying swap:', error)
+    } finally {
+      setIsSwapping(false)
+    }
+  }
+
+  const handleRemoveIngredient = async (ingredient: Ingredient) => {
+    setIsSwapping(true)
+    setSwapSheetOpen(false)
+    
+    try {
+      const response = await fetch('/api/remove-ingredient', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipe,
+          ingredientToRemove: { name: ingredient.name, amount: ingredient.amount },
+        }),
+      })
+      
+      if (!response.ok) throw new Error('Failed to remove ingredient')
+      
+      const data = await response.json()
+      
+      setRecipe({
+        ...recipe,
+        ingredients: data.ingredients,
+        steps: data.steps,
+      })
+      
+      if (data.removalNote) {
+        setSwapNotes(prev => [...prev, `Removed ${ingredient.name}: ${data.removalNote}`])
+      }
+    } catch (error) {
+      console.error('Error removing ingredient:', error)
     } finally {
       setIsSwapping(false)
     }
@@ -589,7 +622,8 @@ export function RecipeDisplay({ recipe: initialRecipe, onBack }: RecipeDisplayPr
           ingredient={selectedIngredient}
           recipeContext={getRecipeContext()}
           onSwap={handleSwap}
-          isSwapping={isSwapping}
+          onRemove={handleRemoveIngredient}
+          isApplying={isSwapping}
         />
       )}
 
