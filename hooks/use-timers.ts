@@ -11,32 +11,43 @@ export interface Timer {
   isComplete: boolean
 }
 
+// Create beep sound using Web Audio API
+function createBeepSound(audioContext: AudioContext) {
+  const oscillator = audioContext.createOscillator()
+  const gainNode = audioContext.createGain()
+  
+  oscillator.connect(gainNode)
+  gainNode.connect(audioContext.destination)
+  
+  oscillator.frequency.value = 880 // A5 note
+  oscillator.type = 'sine'
+  
+  const now = audioContext.currentTime
+  gainNode.gain.setValueAtTime(0, now)
+  
+  // Three beeps
+  for (let i = 0; i < 3; i++) {
+    const beepStart = now + i * 0.35
+    gainNode.gain.linearRampToValueAtTime(0.5, beepStart + 0.02)
+    gainNode.gain.linearRampToValueAtTime(0.5, beepStart + 0.18)
+    gainNode.gain.linearRampToValueAtTime(0, beepStart + 0.2)
+  }
+  
+  oscillator.start(now)
+  oscillator.stop(now + 1.1)
+}
+
 export function useTimers() {
   const [timers, setTimers] = useState<Timer[]>([])
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
-  const audioRef = useRef<HTMLAudioElement | null>(null)
+  const audioContextRef = useRef<AudioContext | null>(null)
 
-  // Initialize audio on client side
+  // Initialize audio context on client side
   useEffect(() => {
-    audioRef.current = new Audio('/timer-alert.mp3')
-    audioRef.current.volume = 0.7
-    
     // Request notification permission
     if ('Notification' in window && Notification.permission === 'default') {
       Notification.requestPermission()
     }
-
-    // Request wake lock to keep screen on while timers are active
-    const requestWakeLock = async () => {
-      if ('wakeLock' in navigator && timers.some(t => t.isRunning)) {
-        try {
-          await (navigator as any).wakeLock.request('screen')
-        } catch (err) {
-          console.log('Wake lock not available')
-        }
-      }
-    }
-    requestWakeLock()
 
     return () => {
       if (intervalRef.current) {
@@ -44,6 +55,20 @@ export function useTimers() {
       }
     }
   }, [])
+  
+  // Request wake lock when timers are running
+  useEffect(() => {
+    const requestWakeLock = async () => {
+      if ('wakeLock' in navigator && timers.some(t => t.isRunning)) {
+        try {
+          await (navigator as any).wakeLock.request('screen')
+        } catch (err) {
+          // Wake lock not available
+        }
+      }
+    }
+    requestWakeLock()
+  }, [timers])
 
   // Main timer tick
   useEffect(() => {
@@ -79,10 +104,14 @@ export function useTimers() {
   }, [timers])
 
   const playAlert = useCallback((label: string) => {
-    // Play sound
-    if (audioRef.current) {
-      audioRef.current.currentTime = 0
-      audioRef.current.play().catch(() => {})
+    // Play sound using Web Audio API
+    try {
+      if (!audioContextRef.current) {
+        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)()
+      }
+      createBeepSound(audioContextRef.current)
+    } catch (err) {
+      // Audio not available
     }
 
     // Vibrate if supported

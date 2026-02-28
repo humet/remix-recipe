@@ -6,13 +6,17 @@ import { useState } from 'react'
 
 interface TimerBarProps {
   timers: Timer[]
-  onPause: (id: string) => void
-  onResume: (id: string) => void
-  onRemove: (id: string) => void
-  onReset: (id: string) => void
+  addTimer: (label: string, timeString: string) => string | null
+  pauseTimer: (id: string) => void
+  resumeTimer: (id: string) => void
+  removeTimer: (id: string) => void
+  resetTimer: (id: string) => void
+  clearCompletedTimers: () => void
+  activeCount: number
+  completedCount: number
 }
 
-export function TimerBar({ timers, onPause, onResume, onRemove, onReset }: TimerBarProps) {
+export function TimerBar({ timers, pauseTimer, resumeTimer, removeTimer, resetTimer }: TimerBarProps) {
   const [expanded, setExpanded] = useState(false)
   
   if (timers.length === 0) return null
@@ -53,7 +57,7 @@ export function TimerBar({ timers, onPause, onResume, onRemove, onReset }: Timer
                 <div className="flex items-center gap-1">
                   {timer.isComplete ? (
                     <button
-                      onClick={() => onReset(timer.id)}
+                      onClick={() => resetTimer(timer.id)}
                       className="h-10 w-10 flex items-center justify-center rounded-xl glass text-foreground"
                       aria-label="Restart timer"
                     >
@@ -61,7 +65,7 @@ export function TimerBar({ timers, onPause, onResume, onRemove, onReset }: Timer
                     </button>
                   ) : (
                     <button
-                      onClick={() => timer.isRunning ? onPause(timer.id) : onResume(timer.id)}
+                      onClick={() => timer.isRunning ? pauseTimer(timer.id) : resumeTimer(timer.id)}
                       className="h-10 w-10 flex items-center justify-center rounded-xl glass text-foreground"
                       aria-label={timer.isRunning ? 'Pause timer' : 'Resume timer'}
                     >
@@ -69,7 +73,7 @@ export function TimerBar({ timers, onPause, onResume, onRemove, onReset }: Timer
                     </button>
                   )}
                   <button
-                    onClick={() => onRemove(timer.id)}
+                    onClick={() => removeTimer(timer.id)}
                     className="h-10 w-10 flex items-center justify-center rounded-xl glass text-muted-foreground hover:text-destructive"
                     aria-label="Remove timer"
                   >

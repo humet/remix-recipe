@@ -5,6 +5,8 @@ import { ImprovedRecipe, Ingredient } from '@/lib/recipe-types'
 import { Button } from '@/components/ui/button'
 import { ProcessingOverlay } from '@/components/processing-overlay'
 import { IngredientSwapSheet } from '@/components/ingredient-swap-sheet'
+import { TimerBar } from '@/components/timer-bar'
+import { useTimers } from '@/hooks/use-timers'
 import { 
   ArrowLeft, 
   Clock, 
@@ -21,7 +23,8 @@ import {
   X,
   Info,
   Loader2,
-  RefreshCw
+  RefreshCw,
+  Timer
 } from 'lucide-react'
 
 interface RecipeDisplayProps {
@@ -102,6 +105,9 @@ export function RecipeDisplay({ recipe: initialRecipe, onBack }: RecipeDisplayPr
     setRecipe(initialRecipe)
     setScalingNotes(null)
   }
+
+  // Timer hook
+  const timerHook = useTimers()
 
   // Ingredient swap state
   const [swapSheetOpen, setSwapSheetOpen] = useState(false)
@@ -287,10 +293,13 @@ export function RecipeDisplay({ recipe: initialRecipe, onBack }: RecipeDisplayPr
                 {step.stepNumber}
               </div>
               {step.timing && (
-                <div className="flex items-center gap-1.5 px-4 py-2 glass rounded-xl">
-                  <Clock className="h-4 w-4 text-primary" />
+                <button
+                  onClick={() => timerHook.addTimer(`Step ${step.stepNumber}`, step.timing!)}
+                  className="flex items-center gap-1.5 px-4 py-2 glass rounded-xl hover:ring-2 hover:ring-primary/30 transition-all active:scale-95"
+                >
+                  <Timer className="h-4 w-4 text-primary" />
                   <span className="text-sm font-medium text-foreground">{step.timing}</span>
-                </div>
+                </button>
               )}
             </div>
 
@@ -309,8 +318,11 @@ export function RecipeDisplay({ recipe: initialRecipe, onBack }: RecipeDisplayPr
           </div>
         </main>
 
+        {/* Timer Bar */}
+        <TimerBar {...timerHook} />
+
         {/* Navigation */}
-        <footer className="sticky bottom-0 glass-strong p-4 pb-8">
+        <footer className={`sticky bottom-0 glass-strong p-4 pb-8 ${timerHook.timers.length > 0 ? 'pb-4' : ''}`}>
           <div className="flex gap-3">
             <Button
               variant="outline"
