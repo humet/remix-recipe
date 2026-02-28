@@ -46,7 +46,7 @@ ${recipe.steps.map((s: { stepNumber: number; instruction: string; timing: string
 Scale to: ${newServings} servings`
 
     const { output } = await generateText({
-      model: 'google/gemini-2.5-flash',
+      model: 'google/gemini-3-flash',
       output: Output.object({
         schema: scaledRecipeSchema,
       }),

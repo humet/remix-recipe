@@ -60,7 +60,7 @@ Recipe to process:
 ${parsedRecipe}`
 
     const { output } = await generateText({
-      model: 'google/gemini-2.5-flash',
+      model: 'google/gemini-3-flash',
       output: Output.object({
         schema: improvedRecipeSchema,
       }),
