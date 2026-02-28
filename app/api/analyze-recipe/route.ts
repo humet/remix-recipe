@@ -68,7 +68,7 @@ ${recipeText ? `Recipe to analyze:\n${recipeText}` : 'Please extract and analyze
     })
 
     const { output } = await generateText({
-      model: 'anthropic/claude-sonnet-4.6',
+      model: 'openai/gpt-4o',
       output: Output.object({
         schema: analysisSchema,
       }),

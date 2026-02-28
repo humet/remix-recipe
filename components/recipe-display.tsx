@@ -18,7 +18,8 @@ import {
   Minus,
   Plus,
   X,
-  Info
+  Info,
+  Loader2
 } from 'lucide-react'
 
 interface RecipeDisplayProps {
@@ -397,14 +398,7 @@ export function RecipeDisplay({ recipe: initialRecipe, onBack }: RecipeDisplayPr
                   disabled={isScaling}
                   className="w-full h-11 rounded-lg"
                 >
-                  {isScaling ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      Scaling recipe...
-                    </>
-                  ) : (
-                    `Scale to ${targetServings} servings`
-                  )}
+                  Scale to {targetServings} servings
                 </Button>
               )}
             </div>

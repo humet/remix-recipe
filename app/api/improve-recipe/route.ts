@@ -60,7 +60,7 @@ Recipe to process:
 ${parsedRecipe}`
 
     const { output } = await generateText({
-      model: 'anthropic/claude-sonnet-4.6',
+      model: 'openai/gpt-4o',
       output: Output.object({
         schema: improvedRecipeSchema,
       }),

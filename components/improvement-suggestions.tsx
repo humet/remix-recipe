@@ -204,12 +204,7 @@ export function ImprovementSuggestions({
             disabled={isLoading}
             className="h-14 text-base font-semibold rounded-xl"
           >
-            {isLoading ? (
-              <span className="flex items-center gap-2">
-                <span className="h-5 w-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
-                Improving recipe...
-              </span>
-            ) : hasSelections ? (
+            {hasSelections ? (
               <span className="flex items-center gap-2">
                 <Sparkles className="h-5 w-5" />
                 Apply {selectedIds.size > 0 ? `${selectedIds.size} improvement${selectedIds.size > 1 ? 's' : ''}` : 'custom request'}

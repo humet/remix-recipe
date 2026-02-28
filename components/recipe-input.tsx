@@ -200,17 +200,8 @@ export function RecipeInput({ onImprove, isLoading }: RecipeInputProps) {
           size="lg"
           className="h-14 rounded-xl text-base font-semibold gap-2"
         >
-          {isLoading ? (
-            <>
-              <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
-              Improving recipe...
-            </>
-          ) : (
-            <>
-              <Sparkles className="h-5 w-5" />
-              Improve Recipe
-            </>
-          )}
+          <Sparkles className="h-5 w-5" />
+          Analyze Recipe
         </Button>
       </div>
     </div>
