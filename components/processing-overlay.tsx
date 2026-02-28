@@ -113,7 +113,7 @@ export function ProcessingOverlay({ type, isVisible }: ProcessingOverlayProps) {
         </div>
 
         {/* Title */}
-        <h2 className="font-serif text-2xl text-foreground">
+        <h2 className="text-2xl font-semibold text-foreground">
           {config.title}{dots}
         </h2>
 

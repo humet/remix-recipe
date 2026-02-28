@@ -197,7 +197,7 @@ export function RecipeDisplay({ recipe: initialRecipe, onBack }: RecipeDisplayPr
           <div className="flex flex-col gap-6">
             {/* Step Number Badge */}
             <div className="flex items-center gap-3">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-accent text-white font-serif text-2xl shadow-lg shadow-primary/25">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-accent text-white font-bold text-2xl shadow-lg shadow-primary/25">
                 {step.stepNumber}
               </div>
               {step.timing && (
@@ -275,7 +275,7 @@ export function RecipeDisplay({ recipe: initialRecipe, onBack }: RecipeDisplayPr
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
-          <h1 className="font-serif text-lg font-medium text-foreground truncate">{recipe.title}</h1>
+          <h1 className="text-lg font-semibold text-foreground truncate">{recipe.title}</h1>
         </div>
       </header>
 
@@ -284,7 +284,7 @@ export function RecipeDisplay({ recipe: initialRecipe, onBack }: RecipeDisplayPr
         <div className="flex flex-col gap-6">
           {/* Title & Description */}
           <div className="flex flex-col gap-3">
-            <h2 className="font-serif text-2xl text-foreground text-balance">{recipe.title}</h2>
+            <h2 className="text-2xl font-semibold text-foreground text-balance">{recipe.title}</h2>
             <p className="text-muted-foreground leading-relaxed">{recipe.description}</p>
           </div>
 
@@ -426,7 +426,7 @@ export function RecipeDisplay({ recipe: initialRecipe, onBack }: RecipeDisplayPr
 
           {/* Ingredients */}
           <section className="flex flex-col gap-4">
-            <h3 className="font-serif text-xl text-foreground">Ingredients</h3>
+            <h3 className="text-lg font-semibold text-foreground">Ingredients</h3>
             <div className="glass rounded-2xl divide-y divide-border/30">
               {recipe.ingredients.map((ingredient, index) => (
                 <div key={index} className="flex items-center gap-3 p-4">
@@ -444,7 +444,7 @@ export function RecipeDisplay({ recipe: initialRecipe, onBack }: RecipeDisplayPr
 
           {/* Steps Preview */}
           <section className="flex flex-col gap-4">
-            <h3 className="font-serif text-xl text-foreground">Steps</h3>
+            <h3 className="text-lg font-semibold text-foreground">Steps</h3>
             <div className="flex flex-col gap-3">
               {recipe.steps.map((step, index) => (
                 <button
@@ -477,7 +477,7 @@ export function RecipeDisplay({ recipe: initialRecipe, onBack }: RecipeDisplayPr
           {/* Pro Tips */}
           {recipe.proTips.length > 0 && (
             <section className="flex flex-col gap-4">
-              <h3 className="font-serif text-xl text-foreground">Pro Tips</h3>
+              <h3 className="text-lg font-semibold text-foreground">Pro Tips</h3>
               <div className="flex flex-col gap-3">
                 {recipe.proTips.map((tip, index) => (
                   <div key={index} className="flex gap-3 p-4 glass rounded-2xl border-l-4 border-accent">

@@ -95,7 +95,7 @@ export function ImprovementSuggestions({
             <ArrowLeft className="h-5 w-5" />
           </button>
           <div className="flex-1 min-w-0">
-            <h1 className="font-serif text-xl font-medium text-foreground truncate">
+            <h1 className="text-xl font-semibold text-foreground truncate">
               {analysis.title}
             </h1>
             <p className="text-sm text-muted-foreground truncate">
