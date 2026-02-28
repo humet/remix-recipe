@@ -1,9 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { ImprovedRecipe } from '@/lib/recipe-types'
+import { ImprovedRecipe, Ingredient } from '@/lib/recipe-types'
 import { Button } from '@/components/ui/button'
 import { ProcessingOverlay } from '@/components/processing-overlay'
+import { IngredientSwapSheet } from '@/components/ingredient-swap-sheet'
 import { 
   ArrowLeft, 
   Clock, 
@@ -19,7 +20,8 @@ import {
   Plus,
   X,
   Info,
-  Loader2
+  Loader2,
+  RefreshCw
 } from 'lucide-react'
 
 interface RecipeDisplayProps {
@@ -99,6 +101,57 @@ export function RecipeDisplay({ recipe: initialRecipe, onBack }: RecipeDisplayPr
     setCurrentScaledServings(originalServings)
     setRecipe(initialRecipe)
     setScalingNotes(null)
+  }
+
+  // Ingredient swap state
+  const [swapSheetOpen, setSwapSheetOpen] = useState(false)
+  const [selectedIngredient, setSelectedIngredient] = useState<Ingredient | null>(null)
+  const [isSwapping, setIsSwapping] = useState(false)
+  const [swapNotes, setSwapNotes] = useState<string[]>([])
+
+  const getRecipeContext = () => {
+    return `${recipe.title}\n\nIngredients:\n${recipe.ingredients.map(i => `- ${i.amount} ${i.name}`).join('\n')}\n\nSteps:\n${recipe.steps.map(s => `${s.stepNumber}. ${s.instruction}`).join('\n')}`
+  }
+
+  const handleIngredientTap = (ingredient: Ingredient) => {
+    setSelectedIngredient(ingredient)
+    setSwapSheetOpen(true)
+  }
+
+  const handleSwap = async (original: Ingredient, replacement: { name: string; amount: string }) => {
+    setIsSwapping(true)
+    
+    try {
+      const response = await fetch('/api/apply-swap', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipe,
+          originalIngredient: { name: original.name, amount: original.amount },
+          newIngredient: replacement,
+        }),
+      })
+      
+      if (!response.ok) throw new Error('Failed to apply swap')
+      
+      const data = await response.json()
+      
+      setRecipe({
+        ...recipe,
+        ingredients: data.ingredients,
+        steps: data.steps,
+      })
+      
+      if (data.swapNote) {
+        setSwapNotes(prev => [...prev, data.swapNote])
+      }
+      
+      setSwapSheetOpen(false)
+    } catch (error) {
+      console.error('Error applying swap:', error)
+    } finally {
+      setIsSwapping(false)
+    }
   }
 
   const toggleStepComplete = (stepIndex: number) => {
@@ -426,10 +479,17 @@ export function RecipeDisplay({ recipe: initialRecipe, onBack }: RecipeDisplayPr
 
           {/* Ingredients */}
           <section className="flex flex-col gap-4">
-            <h3 className="text-lg font-semibold text-foreground">Ingredients</h3>
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-foreground">Ingredients</h3>
+              <span className="text-xs text-muted-foreground">Tap to swap</span>
+            </div>
             <div className="glass rounded-2xl divide-y divide-border/30">
               {recipe.ingredients.map((ingredient, index) => (
-                <div key={index} className="flex items-center gap-3 p-4">
+                <button
+                  key={index}
+                  onClick={() => handleIngredientTap(ingredient)}
+                  className="w-full flex items-center gap-3 p-4 text-left hover:bg-primary/5 transition-colors"
+                >
                   <span className="font-bold text-primary min-w-[80px] text-sm">{ingredient.amount}</span>
                   <div className="flex-1">
                     <span className="text-foreground">{ingredient.name}</span>
@@ -437,10 +497,28 @@ export function RecipeDisplay({ recipe: initialRecipe, onBack }: RecipeDisplayPr
                       <span className="text-muted-foreground text-sm"> ({ingredient.notes})</span>
                     )}
                   </div>
-                </div>
+                  <RefreshCw className="h-4 w-4 text-muted-foreground/50 shrink-0" />
+                </button>
               ))}
             </div>
           </section>
+
+          {/* Swap Notes */}
+          {swapNotes.length > 0 && (
+            <div className="flex flex-col gap-3 p-4 glass rounded-2xl border-l-4 border-primary">
+              <div className="flex items-center gap-2">
+                <RefreshCw className="h-5 w-5 text-primary" />
+                <h3 className="font-semibold text-foreground">Ingredient Swaps</h3>
+              </div>
+              <ul className="flex flex-col gap-2">
+                {swapNotes.map((note, index) => (
+                  <li key={index} className="text-sm text-muted-foreground leading-relaxed">
+                    {note}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {/* Steps Preview */}
           <section className="flex flex-col gap-4">
