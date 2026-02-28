@@ -5,6 +5,7 @@ import { RecipeInput } from '@/components/recipe-input'
 import { RecipeDisplay } from '@/components/recipe-display'
 import { ImprovementSuggestions } from '@/components/improvement-suggestions'
 import { ProcessingOverlay } from '@/components/processing-overlay'
+import { SavedRecipes } from '@/components/saved-recipes'
 import { ImprovedRecipe, RecipeAnalysis, SuggestedImprovement } from '@/lib/recipe-types'
 
 type AppState = 'input' | 'suggestions' | 'result'
@@ -16,6 +17,8 @@ export default function Home() {
   const [recipe, setRecipe] = useState<ImprovedRecipe | null>(null)
   const [processingType, setProcessingType] = useState<ProcessingType>(null)
   const [error, setError] = useState<string | null>(null)
+  const [savedRecipeId, setSavedRecipeId] = useState<string | undefined>(undefined)
+  const [refreshKey, setRefreshKey] = useState(0)
 
   // Step 1: Analyze the recipe and get suggestions
   const handleAnalyzeRecipe = async (
@@ -103,6 +106,18 @@ export default function Home() {
     setAnalysis(null)
     setRecipe(null)
     setError(null)
+    setSavedRecipeId(undefined)
+    setRefreshKey(prev => prev + 1)
+  }
+
+  const handleSelectSavedRecipe = (recipe: ImprovedRecipe, savedId: string) => {
+    setRecipe(recipe)
+    setSavedRecipeId(savedId)
+    setAppState('result')
+  }
+
+  const handleRecipeSaved = (id: string) => {
+    setSavedRecipeId(id)
   }
 
   const handleBackToSuggestions = () => {
@@ -115,7 +130,14 @@ export default function Home() {
 
   // Render based on app state
   if (appState === 'result' && recipe) {
-    return <RecipeDisplay recipe={recipe} onBack={analysis ? handleBackToSuggestions : handleBackToInput} />
+    return (
+      <RecipeDisplay
+        recipe={recipe}
+        onBack={analysis ? handleBackToSuggestions : handleBackToInput}
+        savedRecipeId={savedRecipeId}
+        onSaved={handleRecipeSaved}
+      />
+    )
   }
 
   if (appState === 'suggestions' && analysis) {
@@ -146,6 +168,11 @@ export default function Home() {
         </div>
       )}
       
+      {/* Saved Recipes */}
+      <div className="px-5 pb-6">
+        <SavedRecipes key={refreshKey} onSelect={handleSelectSavedRecipe} />
+      </div>
+
       {/* Example recipes hint */}
       <div className="px-5 pb-8">
         <div className="p-4 glass rounded-2xl">

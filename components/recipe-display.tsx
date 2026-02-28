@@ -8,7 +8,6 @@ import { IngredientSwapSheet } from '@/components/ingredient-swap-sheet'
 import { TimerBar } from '@/components/timer-bar'
 import { useTimers } from '@/hooks/use-timers'
 import { createClient } from '@/lib/supabase/client'
-import { useRouter } from 'next/navigation'
 import { 
   ArrowLeft, 
   Clock, 
@@ -34,9 +33,11 @@ import {
 interface RecipeDisplayProps {
   recipe: ImprovedRecipe
   onBack: () => void
+  savedRecipeId?: string
+  onSaved?: (id: string) => void
 }
 
-export function RecipeDisplay({ recipe: initialRecipe, onBack }: RecipeDisplayProps) {
+export function RecipeDisplay({ recipe: initialRecipe, onBack, savedRecipeId, onSaved }: RecipeDisplayProps) {
   const [recipe, setRecipe] = useState(initialRecipe)
   const [currentStep, setCurrentStep] = useState(0)
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set())
@@ -112,6 +113,50 @@ export function RecipeDisplay({ recipe: initialRecipe, onBack }: RecipeDisplayPr
 
   // Timer hook
   const timerHook = useTimers()
+
+  // Save state
+  const [isSaved, setIsSaved] = useState(!!savedRecipeId)
+  const [isSaving, setIsSaving] = useState(false)
+  const [currentSavedId, setCurrentSavedId] = useState<string | undefined>(savedRecipeId)
+
+  const handleSave = async () => {
+    setIsSaving(true)
+    const supabase = createClient()
+    
+    try {
+      if (currentSavedId) {
+        // Update existing
+        await supabase
+          .from('saved_recipes')
+          .update({ 
+            title: recipe.title,
+            recipe_data: recipe,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', currentSavedId)
+      } else {
+        // Insert new
+        const { data } = await supabase
+          .from('saved_recipes')
+          .insert({ 
+            title: recipe.title,
+            recipe_data: recipe
+          })
+          .select('id')
+          .single()
+        
+        if (data) {
+          setCurrentSavedId(data.id)
+          onSaved?.(data.id)
+        }
+      }
+      setIsSaved(true)
+    } catch (error) {
+      console.error('Error saving recipe:', error)
+    } finally {
+      setIsSaving(false)
+    }
+  }
 
   // Ingredient swap state
   const [swapSheetOpen, setSwapSheetOpen] = useState(false)
@@ -386,7 +431,23 @@ export function RecipeDisplay({ recipe: initialRecipe, onBack }: RecipeDisplayPr
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
-          <h1 className="text-lg font-semibold text-foreground truncate">{recipe.title}</h1>
+          <h1 className="flex-1 text-lg font-semibold text-foreground truncate">{recipe.title}</h1>
+          <button
+            onClick={handleSave}
+            disabled={isSaving}
+            className={`flex h-10 w-10 items-center justify-center rounded-full glass hover:scale-105 active:scale-95 transition-all ${
+              isSaved ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
+            }`}
+            aria-label={isSaved ? 'Recipe saved' : 'Save recipe'}
+          >
+            {isSaving ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : isSaved ? (
+              <BookmarkCheck className="h-5 w-5" />
+            ) : (
+              <Bookmark className="h-5 w-5" />
+            )}
+          </button>
         </div>
       </header>
 
