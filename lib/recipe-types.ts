@@ -23,3 +23,17 @@ export interface ImprovedRecipe {
   proTips: string[]
   improvements: string[]
 }
+
+export interface SuggestedImprovement {
+  id: string
+  category: 'taste' | 'health' | 'kid-friendly' | 'easier' | 'faster' | 'vegetarian' | 'budget' | 'presentation'
+  title: string
+  description: string
+}
+
+export interface RecipeAnalysis {
+  title: string
+  summary: string
+  parsedRecipe: string
+  suggestedImprovements: SuggestedImprovement[]
+}

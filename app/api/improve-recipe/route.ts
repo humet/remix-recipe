@@ -29,58 +29,42 @@ const improvedRecipeSchema = z.object({
 
 export async function POST(req: Request) {
   try {
-    const { recipeText, images } = await req.json() as { 
-      recipeText: string
-      images: { base64: string; mediaType: string }[] 
+    const { parsedRecipe, selectedImprovements, customRequest } = await req.json() as { 
+      parsedRecipe: string
+      selectedImprovements: { title: string; description: string }[]
+      customRequest?: string
     }
 
-    const messages: Array<{ role: 'user'; content: Array<{ type: string; text?: string; image?: string; mediaType?: string }> }> = [
-      {
-        role: 'user',
-        content: [],
-      },
-    ]
+    const hasImprovements = selectedImprovements.length > 0 || customRequest
 
-    // Add all images if provided
-    if (images && images.length > 0) {
-      for (const img of images) {
-        messages[0].content.push({
-          type: 'image',
-          image: img.base64,
-          mediaType: img.mediaType || 'image/jpeg',
-        })
-      }
+    let improvementInstructions = ''
+    if (selectedImprovements.length > 0) {
+      improvementInstructions = `\n\nAPPLY THESE IMPROVEMENTS:\n${selectedImprovements.map((imp, i) => `${i + 1}. ${imp.title}: ${imp.description}`).join('\n')}`
+    }
+    if (customRequest) {
+      improvementInstructions += `\n\nUSER'S CUSTOM REQUEST:\n${customRequest}`
     }
 
-    const hasImages = images && images.length > 0
-    const imageCountText = hasImages 
-      ? `${images.length} image${images.length > 1 ? 's' : ''} provided` 
-      : ''
-
-    // Add text prompt
-    messages[0].content.push({
-      type: 'text',
-      text: `You are an expert chef and recipe writer. Analyze the following recipe and improve it into a clear, user-friendly format.
-
-${hasImages ? `I've provided ${imageCountText} of the recipe. Please combine all the information from the images into a single cohesive recipe.` : ''}
+    const prompt = `You are an expert chef and recipe writer. Convert the following recipe into a clear, user-friendly format.
 
 CRITICAL REQUIREMENTS:
 1. In EVERY step instruction, when you mention an ingredient, you MUST include the measurement in parentheses right after the ingredient name. For example: "Add the butter (50g) to the pan" or "Mix in the flour (2 cups) with the sugar (100g)".
 2. Never assume the user knows amounts - always be explicit with measurements in the instructions.
 3. Make instructions clear and beginner-friendly.
 4. Add helpful tips where appropriate.
-5. Improve the recipe with professional techniques if possible.
-${hasImages && images.length > 1 ? '6. If the images show different parts of the same recipe (e.g., ingredients list and method), combine them into one complete recipe.' : ''}
+${hasImprovements ? improvementInstructions : ''}
 
-${recipeText ? `Recipe text to improve:\n${recipeText}` : hasImages ? 'Please extract and improve the recipe from the images provided.' : ''}`,
-    })
+${hasImprovements ? `\nIn the "improvements" field, list the specific changes you made based on the requested improvements above.` : `\nIn the "improvements" field, note any clarifications or formatting improvements you made to the original recipe (no taste/ingredient changes were requested).`}
+
+Recipe to process:
+${parsedRecipe}`
 
     const { output } = await generateText({
       model: 'anthropic/claude-sonnet-4.6',
       output: Output.object({
         schema: improvedRecipeSchema,
       }),
-      messages,
+      prompt,
     })
 
     return Response.json({ recipe: output })
