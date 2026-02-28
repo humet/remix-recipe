@@ -24,6 +24,7 @@ const improvedRecipeSchema = z.object({
     })
   ).describe('Step-by-step instructions with inline measurements'),
   proTips: z.array(z.string()).describe('2-3 professional tips to elevate the dish'),
+  improvements: z.array(z.string()).describe('3-5 brief bullet points summarizing the key improvements made to the original recipe, such as clarified instructions, better techniques, adjusted proportions, or added tips'),
 })
 
 export async function POST(req: Request) {

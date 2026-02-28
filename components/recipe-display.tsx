@@ -12,7 +12,8 @@ import {
   Check,
   ChevronRight,
   ChevronLeft,
-  RotateCcw
+  RotateCcw,
+  Sparkles
 } from 'lucide-react'
 
 interface RecipeDisplayProps {
@@ -208,6 +209,24 @@ export function RecipeDisplay({ recipe, onBack }: RecipeDisplayProps) {
             <h2 className="font-serif text-2xl text-foreground text-balance">{recipe.title}</h2>
             <p className="text-muted-foreground leading-relaxed">{recipe.description}</p>
           </div>
+
+          {/* AI Improvements Summary */}
+          {recipe.improvements && recipe.improvements.length > 0 && (
+            <div className="flex flex-col gap-3 p-4 bg-primary/5 rounded-xl border border-primary/20">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-primary" />
+                <h3 className="font-semibold text-foreground">AI Improvements</h3>
+              </div>
+              <ul className="flex flex-col gap-2">
+                {recipe.improvements.map((improvement, index) => (
+                  <li key={index} className="flex gap-2 text-sm text-muted-foreground">
+                    <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                    <span>{improvement}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {/* Meta Info */}
           <div className="grid grid-cols-2 gap-3">

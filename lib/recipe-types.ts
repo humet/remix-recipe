@@ -21,4 +21,5 @@ export interface ImprovedRecipe {
   ingredients: Ingredient[]
   steps: RecipeStep[]
   proTips: string[]
+  improvements: string[]
 }
