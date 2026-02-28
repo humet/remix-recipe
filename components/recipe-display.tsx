@@ -44,15 +44,24 @@ export function RecipeDisplay({ recipe: initialRecipe, onBack }: RecipeDisplayPr
   }
   
   const [targetServings, setTargetServings] = useState(() => parseServings(recipe.servings))
+  const [currentScaledServings, setCurrentScaledServings] = useState(() => parseServings(recipe.servings))
   const originalServings = parseServings(initialRecipe.servings)
 
-  const handleScaleRecipe = async (newServings: number) => {
-    if (newServings < 1 || newServings > 50) return
-    setTargetServings(newServings)
+  const adjustServings = (delta: number) => {
+    const newValue = targetServings + delta
+    if (newValue >= 1 && newValue <= 50) {
+      setTargetServings(newValue)
+    }
+  }
+
+  const handleApplyScale = async () => {
+    // If already at this scale, do nothing
+    if (targetServings === currentScaledServings) return
     
     // If returning to original, just reset
-    if (newServings === originalServings) {
+    if (targetServings === originalServings) {
       setRecipe(initialRecipe)
+      setCurrentScaledServings(originalServings)
       setScalingNotes(null)
       return
     }
@@ -64,7 +73,7 @@ export function RecipeDisplay({ recipe: initialRecipe, onBack }: RecipeDisplayPr
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           recipe: initialRecipe,
-          newServings: `${newServings} servings`,
+          newServings: `${targetServings} servings`,
         }),
       })
       
@@ -72,15 +81,23 @@ export function RecipeDisplay({ recipe: initialRecipe, onBack }: RecipeDisplayPr
       
       const data = await response.json()
       setRecipe(data.scaledRecipe)
+      setCurrentScaledServings(targetServings)
       setScalingNotes(data.scalingNotes)
       setShowScalingNotes(true)
     } catch (error) {
       console.error('Error scaling recipe:', error)
-      // Reset to previous state
-      setTargetServings(parseServings(recipe.servings))
+      // Reset target to current
+      setTargetServings(currentScaledServings)
     } finally {
       setIsScaling(false)
     }
+  }
+
+  const handleResetScale = () => {
+    setTargetServings(originalServings)
+    setCurrentScaledServings(originalServings)
+    setRecipe(initialRecipe)
+    setScalingNotes(null)
   }
 
   const toggleStepComplete = (stepIndex: number) => {
@@ -308,9 +325,9 @@ export function RecipeDisplay({ recipe: initialRecipe, onBack }: RecipeDisplayPr
                   </li>
                 ))}
               </ul>
-              {targetServings !== originalServings && (
+              {currentScaledServings !== originalServings && (
                 <button
-                  onClick={() => handleScaleRecipe(originalServings)}
+                  onClick={handleResetScale}
                   className="text-xs text-amber-700 dark:text-amber-300 underline underline-offset-2 self-start"
                 >
                   Reset to original ({originalServings} servings)
@@ -335,40 +352,58 @@ export function RecipeDisplay({ recipe: initialRecipe, onBack }: RecipeDisplayPr
                 <p className="text-sm font-medium text-foreground">{recipe.cookTime}</p>
               </div>
             </div>
-            <div className="flex items-center justify-between p-3 bg-card rounded-xl border border-border">
-              <div className="flex items-center gap-3">
-                <Users className="h-5 w-5 text-primary" />
-                <div>
-                  <p className="text-xs text-muted-foreground">Servings</p>
-                  <p className="text-sm font-medium text-foreground">
-                    {targetServings !== originalServings && (
-                      <span className="text-muted-foreground line-through mr-1">{originalServings}</span>
-                    )}
+            <div className="col-span-2 flex flex-col gap-3 p-3 bg-card rounded-xl border border-border">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Users className="h-5 w-5 text-primary" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Servings</p>
+                    <p className="text-sm font-medium text-foreground">
+                      {currentScaledServings !== originalServings && (
+                        <span className="text-muted-foreground line-through mr-1">{originalServings}</span>
+                      )}
+                      {currentScaledServings}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => adjustServings(-1)}
+                    disabled={isScaling || targetServings <= 1}
+                    className="h-10 w-10 flex items-center justify-center rounded-full bg-secondary text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
+                    aria-label="Decrease servings"
+                  >
+                    <Minus className="h-4 w-4" />
+                  </button>
+                  <span className="w-10 text-center font-semibold text-lg text-foreground">
                     {targetServings}
-                  </p>
+                  </span>
+                  <button
+                    onClick={() => adjustServings(1)}
+                    disabled={isScaling || targetServings >= 50}
+                    className="h-10 w-10 flex items-center justify-center rounded-full bg-secondary text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
+                    aria-label="Increase servings"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </button>
                 </div>
               </div>
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => handleScaleRecipe(targetServings - 1)}
-                  disabled={isScaling || targetServings <= 1}
-                  className="h-9 w-9 flex items-center justify-center rounded-full bg-secondary text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
-                  aria-label="Decrease servings"
+              {targetServings !== currentScaledServings && (
+                <Button
+                  onClick={handleApplyScale}
+                  disabled={isScaling}
+                  className="w-full h-11 rounded-lg"
                 >
-                  <Minus className="h-4 w-4" />
-                </button>
-                <span className="w-8 text-center font-semibold text-foreground">
-                  {isScaling ? <Loader2 className="h-4 w-4 animate-spin mx-auto" /> : targetServings}
-                </span>
-                <button
-                  onClick={() => handleScaleRecipe(targetServings + 1)}
-                  disabled={isScaling || targetServings >= 50}
-                  className="h-9 w-9 flex items-center justify-center rounded-full bg-secondary text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
-                  aria-label="Increase servings"
-                >
-                  <Plus className="h-4 w-4" />
-                </button>
-              </div>
+                  {isScaling ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      Scaling recipe...
+                    </>
+                  ) : (
+                    `Scale to ${targetServings} servings`
+                  )}
+                </Button>
+              )}
             </div>
             <div className="flex items-center gap-3 p-3 bg-card rounded-xl border border-border">
               <ChefHat className="h-5 w-5 text-primary" />
