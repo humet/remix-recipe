@@ -136,6 +136,13 @@ export default function Home() {
     setError(null)
   }
 
+  const handleReimprove = () => {
+    if (analysis) {
+      setRecipe(null)
+      setAppState('suggestions')
+    }
+  }
+
   const isLoading = processingType !== null
 
   // Render based on app state
@@ -148,6 +155,7 @@ export default function Home() {
         onSaved={handleRecipeSaved}
         originalInput={originalInput}
         originalAnalysis={analysis}
+        onReimprove={analysis ? handleReimprove : undefined}
       />
     )
   }

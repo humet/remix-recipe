@@ -27,7 +27,8 @@ import {
   RefreshCw,
   Timer,
   Bookmark,
-  BookmarkCheck
+  BookmarkCheck,
+  Wand2
 } from 'lucide-react'
 
 interface RecipeDisplayProps {
@@ -37,9 +38,10 @@ interface RecipeDisplayProps {
   onSaved?: (id: string) => void
   originalInput?: string
   originalAnalysis?: RecipeAnalysis | null
+  onReimprove?: () => void
 }
 
-export function RecipeDisplay({ recipe: initialRecipe, onBack, savedRecipeId, onSaved, originalInput, originalAnalysis }: RecipeDisplayProps) {
+export function RecipeDisplay({ recipe: initialRecipe, onBack, savedRecipeId, onSaved, originalInput, originalAnalysis, onReimprove }: RecipeDisplayProps) {
   const [recipe, setRecipe] = useState(initialRecipe)
   const [currentStep, setCurrentStep] = useState(0)
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set())
@@ -482,6 +484,17 @@ export function RecipeDisplay({ recipe: initialRecipe, onBack, savedRecipeId, on
                 ))}
               </ul>
             </div>
+          )}
+
+          {/* Re-improve option */}
+          {originalAnalysis && onReimprove && (
+            <button
+              onClick={onReimprove}
+              className="flex items-center justify-center gap-2 p-4 glass rounded-2xl text-muted-foreground hover:text-foreground hover:ring-2 hover:ring-primary/30 transition-all"
+            >
+              <Wand2 className="h-5 w-5" />
+              <span className="font-medium">Try different improvements</span>
+            </button>
           )}
 
           {/* Scaling Notes */}
