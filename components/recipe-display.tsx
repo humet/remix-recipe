@@ -159,6 +159,15 @@ export function RecipeDisplay({ recipe: initialRecipe, onBack }: RecipeDisplayPr
     }
   }
 
+  // Create a short descriptive label from the step instruction
+  const getTimerLabel = (instruction: string): string => {
+    // Get first 30 chars of instruction, cut at last word boundary
+    const shortened = instruction.slice(0, 40)
+    const lastSpace = shortened.lastIndexOf(' ')
+    const label = lastSpace > 20 ? shortened.slice(0, lastSpace) : shortened
+    return label + (instruction.length > 40 ? '...' : '')
+  }
+
   const handleRemoveIngredient = async (ingredient: Ingredient) => {
     setIsSwapping(true)
     setSwapSheetOpen(false)
@@ -294,7 +303,7 @@ export function RecipeDisplay({ recipe: initialRecipe, onBack }: RecipeDisplayPr
               </div>
               {step.timing && (
                 <button
-                  onClick={() => timerHook.addTimer(`Step ${step.stepNumber}`, step.timing!)}
+                  onClick={() => timerHook.addTimer(getTimerLabel(step.instruction), step.timing!)}
                   className="flex items-center gap-1.5 px-4 py-2 glass rounded-xl hover:ring-2 hover:ring-primary/30 transition-all active:scale-95"
                 >
                   <Timer className="h-4 w-4 text-primary" />
