@@ -87,30 +87,33 @@ export function ProcessingOverlay({ type, isVisible }: ProcessingOverlayProps) {
   if (!isVisible) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/95 backdrop-blur-sm">
-      <div className="flex flex-col items-center gap-6 p-8 max-w-sm text-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-xl">
+      <div className="flex flex-col items-center gap-8 p-10 max-w-sm text-center glass-strong rounded-3xl mx-6">
         {/* Animated Icon Container */}
         <div className="relative">
           {/* Pulsing ring */}
-          <div className="absolute inset-0 rounded-full bg-primary/20 animate-ping" />
+          <div className="absolute inset-[-8px] rounded-full bg-gradient-to-r from-primary/30 to-accent/30 animate-ping" />
           
           {/* Spinning border */}
-          <div className="relative h-20 w-20 rounded-full">
-            <div className="absolute inset-0 rounded-full border-4 border-primary/20" />
+          <div className="relative h-24 w-24 rounded-2xl">
+            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/20 to-accent/20" />
             <div 
-              className="absolute inset-0 rounded-full border-4 border-transparent border-t-primary animate-spin"
-              style={{ animationDuration: '1.5s' }}
+              className="absolute inset-0 rounded-2xl border-4 border-transparent"
+              style={{ 
+                background: 'linear-gradient(white, white) padding-box, linear-gradient(135deg, var(--primary), var(--accent)) border-box',
+                animationDuration: '2s'
+              }}
             />
             
             {/* Icon */}
             <div className="absolute inset-0 flex items-center justify-center">
-              <Icon className="h-8 w-8 text-primary" />
+              <Icon className="h-10 w-10 text-primary animate-pulse" />
             </div>
           </div>
         </div>
 
         {/* Title */}
-        <h2 className="font-serif text-xl text-foreground">
+        <h2 className="font-serif text-2xl text-foreground">
           {config.title}{dots}
         </h2>
 
@@ -125,14 +128,14 @@ export function ProcessingOverlay({ type, isVisible }: ProcessingOverlayProps) {
         </div>
 
         {/* Progress bar */}
-        <div className="w-48 h-1 bg-secondary rounded-full overflow-hidden">
+        <div className="w-full h-2 glass rounded-full overflow-hidden">
           <div 
-            className="h-full bg-primary rounded-full animate-progress"
+            className="h-full bg-gradient-to-r from-primary to-accent rounded-full animate-progress"
           />
         </div>
 
         {/* Reassurance text */}
-        <p className="text-xs text-muted-foreground/70">
+        <p className="text-xs text-muted-foreground">
           This usually takes 10-20 seconds
         </p>
       </div>

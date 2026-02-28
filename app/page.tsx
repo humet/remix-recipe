@@ -140,7 +140,7 @@ export default function Home() {
       
       {error && (
         <div className="px-5 pb-5">
-          <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-xl text-destructive text-sm text-center">
+          <div className="p-4 glass rounded-2xl border-l-4 border-destructive text-destructive text-sm text-center">
             {error}
           </div>
         </div>
@@ -148,8 +148,8 @@ export default function Home() {
       
       {/* Example recipes hint */}
       <div className="px-5 pb-8">
-        <div className="p-4 bg-secondary/50 rounded-xl">
-          <p className="text-sm text-muted-foreground text-center">
+        <div className="p-4 glass rounded-2xl">
+          <p className="text-sm text-muted-foreground text-center leading-relaxed">
             Paste any recipe text, screenshot, or photo. The AI will suggest improvements like making it healthier, tastier, or kid-friendly.
           </p>
         </div>

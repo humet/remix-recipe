@@ -85,11 +85,11 @@ export function ImprovementSuggestions({
   return (
     <main className="min-h-screen bg-background">
       {/* Header */}
-      <header className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border">
+      <header className="sticky top-0 z-10 glass-strong border-b-0">
         <div className="flex items-center gap-3 px-5 py-4">
           <button
             onClick={onBack}
-            className="h-11 w-11 flex items-center justify-center rounded-full bg-secondary text-foreground"
+            className="h-11 w-11 flex items-center justify-center rounded-full glass text-foreground hover:scale-105 active:scale-95 transition-transform"
             aria-label="Go back"
           >
             <ArrowLeft className="h-5 w-5" />
@@ -105,10 +105,10 @@ export function ImprovementSuggestions({
         </div>
       </header>
 
-      <div className="flex flex-col gap-6 p-5 pb-32">
+      <div className="flex flex-col gap-6 p-5 pb-36">
         {/* Recipe Summary */}
-        <div className="flex flex-col gap-2 p-4 bg-card rounded-xl border border-border">
-          <p className="text-sm text-muted-foreground">{analysis.summary}</p>
+        <div className="flex flex-col gap-2 p-4 glass rounded-2xl">
+          <p className="text-sm text-muted-foreground leading-relaxed">{analysis.summary}</p>
         </div>
 
         {/* AI Suggestions Section */}
@@ -131,23 +131,25 @@ export function ImprovementSuggestions({
                   key={improvement.id}
                   onClick={() => toggleSelection(improvement.id)}
                   disabled={isLoading}
-                  className={`flex items-start gap-3 p-4 rounded-xl border-2 text-left transition-all ${
+                  className={`flex items-start gap-3 p-4 rounded-2xl text-left transition-all hover:scale-[1.01] active:scale-[0.99] ${
                     isSelected 
-                      ? 'border-primary bg-primary/5' 
-                      : 'border-border bg-card hover:border-primary/50'
+                      ? 'glass-strong ring-2 ring-primary/50' 
+                      : 'glass hover:ring-1 hover:ring-primary/30'
                   } ${isLoading ? 'opacity-50' : ''}`}
                 >
-                  <div className={`shrink-0 h-10 w-10 flex items-center justify-center rounded-lg border ${categoryColors[improvement.category]}`}>
+                  <div className={`shrink-0 h-11 w-11 flex items-center justify-center rounded-xl ${categoryColors[improvement.category]}`}>
                     <Icon className="h-5 w-5" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <h3 className="font-medium text-foreground">{improvement.title}</h3>
                       {isSelected && (
-                        <Check className="h-4 w-4 text-primary shrink-0" />
+                        <div className="h-5 w-5 flex items-center justify-center rounded-full bg-primary text-white">
+                          <Check className="h-3 w-3" />
+                        </div>
                       )}
                     </div>
-                    <p className="text-sm text-muted-foreground mt-1">
+                    <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
                       {improvement.description}
                     </p>
                   </div>
@@ -168,7 +170,7 @@ export function ImprovementSuggestions({
             <button
               onClick={() => setShowCustomInput(true)}
               disabled={isLoading}
-              className="flex items-center justify-center gap-2 py-4 rounded-xl border-2 border-dashed border-border bg-card text-muted-foreground hover:border-primary hover:text-primary transition-colors"
+              className="flex items-center justify-center gap-2 py-5 rounded-2xl border-2 border-dashed border-border/50 glass-subtle text-muted-foreground hover:border-primary/50 hover:text-primary transition-all hover:scale-[1.01] active:scale-[0.99]"
             >
               <Wand2 className="h-5 w-5" />
               <span className="text-sm font-medium">Add your own improvement request</span>
@@ -179,7 +181,7 @@ export function ImprovementSuggestions({
                 value={customRequest}
                 onChange={(e) => setCustomRequest(e.target.value)}
                 placeholder="E.g., Make it spicier, add a crispy topping, substitute dairy with oat milk..."
-                className="min-h-[100px] text-base resize-none"
+                className="min-h-[100px] text-base resize-none glass rounded-2xl border-0"
                 disabled={isLoading}
               />
               <button
@@ -197,12 +199,12 @@ export function ImprovementSuggestions({
       </div>
 
       {/* Fixed Bottom Actions */}
-      <div className="fixed bottom-0 left-0 right-0 p-5 bg-background/95 backdrop-blur-sm border-t border-border">
+      <div className="fixed bottom-0 left-0 right-0 p-5 pb-8 glass-strong border-t-0">
         <div className="flex flex-col gap-3">
           <Button
             onClick={handleApply}
             disabled={isLoading}
-            className="h-14 text-base font-semibold rounded-xl"
+            className="h-14 text-base font-semibold rounded-2xl bg-gradient-to-r from-primary to-accent hover:opacity-90 shadow-lg shadow-primary/25 transition-all hover:scale-[1.02] active:scale-[0.98]"
           >
             {hasSelections ? (
               <span className="flex items-center gap-2">

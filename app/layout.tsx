@@ -1,17 +1,16 @@
 import type { Metadata, Viewport } from 'next'
-import { DM_Sans, DM_Serif_Display } from 'next/font/google'
+import { Inter, Playfair_Display } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 
-const dmSans = DM_Sans({ 
+const inter = Inter({ 
   subsets: ["latin"],
-  variable: '--font-dm-sans'
+  variable: '--font-inter'
 });
 
-const dmSerif = DM_Serif_Display({ 
-  weight: '400',
+const playfair = Playfair_Display({ 
   subsets: ["latin"],
-  variable: '--font-dm-serif'
+  variable: '--font-playfair'
 });
 
 export const metadata: Metadata = {
@@ -43,7 +42,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  themeColor: '#c45f34',
+  themeColor: '#6366f1',
 }
 
 export default function RootLayout({
@@ -53,7 +52,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="bg-background">
-      <body className={`${dmSans.variable} ${dmSerif.variable} font-sans antialiased`}>
+      <body className={`${inter.variable} ${playfair.variable} font-sans antialiased`}>
         {children}
         <Analytics />
       </body>

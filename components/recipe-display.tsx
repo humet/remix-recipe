@@ -160,11 +160,11 @@ export function RecipeDisplay({ recipe: initialRecipe, onBack }: RecipeDisplayPr
       <div className="flex flex-col min-h-screen bg-background">
         <ProcessingOverlay type="scaling" isVisible={isScaling} />
         {/* Cooking Mode Header */}
-        <header className="sticky top-0 z-10 bg-background border-b border-border px-4 py-3">
+        <header className="sticky top-0 z-10 glass-strong px-4 py-3">
           <div className="flex items-center justify-between">
             <button
               onClick={() => setView('overview')}
-              className="flex items-center gap-1 text-muted-foreground"
+              className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
             >
               <ArrowLeft className="h-5 w-5" />
               <span className="text-sm">Overview</span>
@@ -177,16 +177,16 @@ export function RecipeDisplay({ recipe: initialRecipe, onBack }: RecipeDisplayPr
                 setCurrentStep(0)
                 setCompletedSteps(new Set())
               }}
-              className="text-muted-foreground"
+              className="h-9 w-9 flex items-center justify-center rounded-full glass text-muted-foreground hover:text-foreground transition-colors"
               aria-label="Restart"
             >
-              <RotateCcw className="h-5 w-5" />
+              <RotateCcw className="h-4 w-4" />
             </button>
           </div>
           {/* Progress Bar */}
-          <div className="mt-3 h-1.5 bg-secondary rounded-full overflow-hidden">
+          <div className="mt-3 h-2 glass rounded-full overflow-hidden">
             <div 
-              className="h-full bg-primary transition-all duration-300 ease-out"
+              className="h-full bg-gradient-to-r from-primary to-accent transition-all duration-300 ease-out rounded-full"
               style={{ width: `${progress}%` }}
             />
           </div>
@@ -197,12 +197,12 @@ export function RecipeDisplay({ recipe: initialRecipe, onBack }: RecipeDisplayPr
           <div className="flex flex-col gap-6">
             {/* Step Number Badge */}
             <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground font-serif text-xl">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-accent text-white font-serif text-2xl shadow-lg shadow-primary/25">
                 {step.stepNumber}
               </div>
               {step.timing && (
-                <div className="flex items-center gap-1.5 px-3 py-1.5 bg-secondary rounded-full">
-                  <Clock className="h-4 w-4 text-muted-foreground" />
+                <div className="flex items-center gap-1.5 px-4 py-2 glass rounded-xl">
+                  <Clock className="h-4 w-4 text-primary" />
                   <span className="text-sm font-medium text-foreground">{step.timing}</span>
                 </div>
               )}
@@ -215,7 +215,7 @@ export function RecipeDisplay({ recipe: initialRecipe, onBack }: RecipeDisplayPr
 
             {/* Tip */}
             {step.tips && (
-              <div className="flex gap-3 p-4 bg-accent/10 rounded-xl border border-accent/20">
+              <div className="flex gap-3 p-4 glass rounded-2xl border-l-4 border-accent">
                 <Lightbulb className="h-5 w-5 text-accent shrink-0 mt-0.5" />
                 <p className="text-sm text-foreground leading-relaxed">{step.tips}</p>
               </div>
@@ -224,14 +224,14 @@ export function RecipeDisplay({ recipe: initialRecipe, onBack }: RecipeDisplayPr
         </main>
 
         {/* Navigation */}
-        <footer className="sticky bottom-0 bg-background border-t border-border p-4 pb-8">
+        <footer className="sticky bottom-0 glass-strong p-4 pb-8">
           <div className="flex gap-3">
             <Button
               variant="outline"
               size="lg"
               onClick={prevStep}
               disabled={currentStep === 0}
-              className="flex-1 h-14 rounded-xl"
+              className="flex-1 h-14 rounded-2xl glass border-0 hover:scale-[1.02] active:scale-[0.98] transition-transform"
             >
               <ChevronLeft className="h-5 w-5 mr-1" />
               Previous
@@ -240,7 +240,7 @@ export function RecipeDisplay({ recipe: initialRecipe, onBack }: RecipeDisplayPr
               <Button
                 size="lg"
                 onClick={() => setView('overview')}
-                className="flex-1 h-14 rounded-xl"
+                className="flex-1 h-14 rounded-2xl bg-gradient-to-r from-primary to-accent shadow-lg shadow-primary/25 hover:scale-[1.02] active:scale-[0.98] transition-transform"
               >
                 <Check className="h-5 w-5 mr-1" />
                 Done!
@@ -249,7 +249,7 @@ export function RecipeDisplay({ recipe: initialRecipe, onBack }: RecipeDisplayPr
               <Button
                 size="lg"
                 onClick={nextStep}
-                className="flex-1 h-14 rounded-xl"
+                className="flex-1 h-14 rounded-2xl bg-gradient-to-r from-primary to-accent shadow-lg shadow-primary/25 hover:scale-[1.02] active:scale-[0.98] transition-transform"
               >
                 Next
                 <ChevronRight className="h-5 w-5 ml-1" />
@@ -266,16 +266,16 @@ export function RecipeDisplay({ recipe: initialRecipe, onBack }: RecipeDisplayPr
       <ProcessingOverlay type="scaling" isVisible={isScaling} />
       
       {/* Header */}
-      <header className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border px-4 py-3">
+      <header className="sticky top-0 z-10 glass-strong px-4 py-3">
         <div className="flex items-center gap-3">
           <button
             onClick={onBack}
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary text-foreground"
+            className="flex h-10 w-10 items-center justify-center rounded-full glass text-foreground hover:scale-105 active:scale-95 transition-transform"
             aria-label="Go back"
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
-          <h1 className="font-serif text-lg font-normal text-foreground truncate">{recipe.title}</h1>
+          <h1 className="font-serif text-lg font-medium text-foreground truncate">{recipe.title}</h1>
         </div>
       </header>
 
@@ -290,7 +290,7 @@ export function RecipeDisplay({ recipe: initialRecipe, onBack }: RecipeDisplayPr
 
           {/* AI Improvements Summary */}
           {recipe.improvements && recipe.improvements.length > 0 && (
-            <div className="flex flex-col gap-3 p-4 bg-primary/5 rounded-xl border border-primary/20">
+            <div className="flex flex-col gap-3 p-4 glass rounded-2xl border-l-4 border-primary">
               <div className="flex items-center gap-2">
                 <Sparkles className="h-5 w-5 text-primary" />
                 <h3 className="font-semibold text-foreground">AI Improvements</h3>
@@ -308,15 +308,15 @@ export function RecipeDisplay({ recipe: initialRecipe, onBack }: RecipeDisplayPr
 
           {/* Scaling Notes */}
           {scalingNotes && scalingNotes.length > 0 && showScalingNotes && (
-            <div className="flex flex-col gap-3 p-4 bg-amber-50 dark:bg-amber-950/30 rounded-xl border border-amber-200 dark:border-amber-800">
+            <div className="flex flex-col gap-3 p-4 glass rounded-2xl border-l-4 border-amber-500">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Info className="h-5 w-5 text-amber-600 dark:text-amber-500" />
-                  <h3 className="font-semibold text-amber-900 dark:text-amber-100">Scaling Notes</h3>
+                  <Info className="h-5 w-5 text-amber-600" />
+                  <h3 className="font-semibold text-foreground">Scaling Notes</h3>
                 </div>
                 <button
                   onClick={() => setShowScalingNotes(false)}
-                  className="h-6 w-6 flex items-center justify-center rounded-full text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900"
+                  className="h-7 w-7 flex items-center justify-center rounded-full glass text-muted-foreground hover:text-foreground"
                   aria-label="Dismiss scaling notes"
                 >
                   <X className="h-4 w-4" />
@@ -324,7 +324,7 @@ export function RecipeDisplay({ recipe: initialRecipe, onBack }: RecipeDisplayPr
               </div>
               <ul className="flex flex-col gap-1.5">
                 {scalingNotes.map((note, index) => (
-                  <li key={index} className="text-sm text-amber-800 dark:text-amber-200 leading-relaxed">
+                  <li key={index} className="text-sm text-muted-foreground leading-relaxed">
                     {note}
                   </li>
                 ))}
@@ -332,7 +332,7 @@ export function RecipeDisplay({ recipe: initialRecipe, onBack }: RecipeDisplayPr
               {currentScaledServings !== originalServings && (
                 <button
                   onClick={handleResetScale}
-                  className="text-xs text-amber-700 dark:text-amber-300 underline underline-offset-2 self-start"
+                  className="text-xs text-primary underline underline-offset-2 self-start"
                 >
                   Reset to original ({originalServings} servings)
                 </button>
@@ -342,27 +342,33 @@ export function RecipeDisplay({ recipe: initialRecipe, onBack }: RecipeDisplayPr
 
           {/* Meta Info */}
           <div className="grid grid-cols-2 gap-3">
-            <div className="flex items-center gap-3 p-3 bg-card rounded-xl border border-border">
-              <Clock className="h-5 w-5 text-primary" />
+            <div className="flex items-center gap-3 p-4 glass rounded-2xl">
+              <div className="h-10 w-10 flex items-center justify-center rounded-xl bg-primary/10">
+                <Clock className="h-5 w-5 text-primary" />
+              </div>
               <div>
                 <p className="text-xs text-muted-foreground">Prep</p>
-                <p className="text-sm font-medium text-foreground">{recipe.prepTime}</p>
+                <p className="text-sm font-semibold text-foreground">{recipe.prepTime}</p>
               </div>
             </div>
-            <div className="flex items-center gap-3 p-3 bg-card rounded-xl border border-border">
-              <Clock className="h-5 w-5 text-primary" />
+            <div className="flex items-center gap-3 p-4 glass rounded-2xl">
+              <div className="h-10 w-10 flex items-center justify-center rounded-xl bg-primary/10">
+                <Clock className="h-5 w-5 text-primary" />
+              </div>
               <div>
                 <p className="text-xs text-muted-foreground">Cook</p>
-                <p className="text-sm font-medium text-foreground">{recipe.cookTime}</p>
+                <p className="text-sm font-semibold text-foreground">{recipe.cookTime}</p>
               </div>
             </div>
-            <div className="col-span-2 flex flex-col gap-3 p-3 bg-card rounded-xl border border-border">
+            <div className="col-span-2 flex flex-col gap-3 p-4 glass rounded-2xl">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <Users className="h-5 w-5 text-primary" />
+                  <div className="h-10 w-10 flex items-center justify-center rounded-xl bg-primary/10">
+                    <Users className="h-5 w-5 text-primary" />
+                  </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Servings</p>
-                    <p className="text-sm font-medium text-foreground">
+                    <p className="text-sm font-semibold text-foreground">
                       {currentScaledServings !== originalServings && (
                         <span className="text-muted-foreground line-through mr-1">{originalServings}</span>
                       )}
@@ -374,18 +380,18 @@ export function RecipeDisplay({ recipe: initialRecipe, onBack }: RecipeDisplayPr
                   <button
                     onClick={() => adjustServings(-1)}
                     disabled={isScaling || targetServings <= 1}
-                    className="h-10 w-10 flex items-center justify-center rounded-full bg-secondary text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="h-11 w-11 flex items-center justify-center rounded-xl glass text-foreground disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105 active:scale-95 transition-transform"
                     aria-label="Decrease servings"
                   >
                     <Minus className="h-4 w-4" />
                   </button>
-                  <span className="w-10 text-center font-semibold text-lg text-foreground">
+                  <span className="w-10 text-center font-bold text-lg text-foreground">
                     {targetServings}
                   </span>
                   <button
                     onClick={() => adjustServings(1)}
                     disabled={isScaling || targetServings >= 50}
-                    className="h-10 w-10 flex items-center justify-center rounded-full bg-secondary text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="h-11 w-11 flex items-center justify-center rounded-xl glass text-foreground disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105 active:scale-95 transition-transform"
                     aria-label="Increase servings"
                   >
                     <Plus className="h-4 w-4" />
@@ -396,17 +402,22 @@ export function RecipeDisplay({ recipe: initialRecipe, onBack }: RecipeDisplayPr
                 <Button
                   onClick={handleApplyScale}
                   disabled={isScaling}
-                  className="w-full h-11 rounded-lg"
+                  className="w-full h-12 rounded-xl bg-gradient-to-r from-primary to-accent shadow-lg shadow-primary/25 hover:scale-[1.02] active:scale-[0.98] transition-transform"
                 >
+                  {isScaling ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : null}
                   Scale to {targetServings} servings
                 </Button>
               )}
             </div>
-            <div className="flex items-center gap-3 p-3 bg-card rounded-xl border border-border">
-              <ChefHat className="h-5 w-5 text-primary" />
+            <div className="flex items-center gap-3 p-4 glass rounded-2xl">
+              <div className="h-10 w-10 flex items-center justify-center rounded-xl bg-primary/10">
+                <ChefHat className="h-5 w-5 text-primary" />
+              </div>
               <div>
                 <p className="text-xs text-muted-foreground">Difficulty</p>
-                <span className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full ${getDifficultyColor(recipe.difficulty)}`}>
+                <span className={`inline-flex px-2.5 py-1 text-xs font-semibold rounded-lg ${getDifficultyColor(recipe.difficulty)}`}>
                   {recipe.difficulty}
                 </span>
               </div>
@@ -414,12 +425,12 @@ export function RecipeDisplay({ recipe: initialRecipe, onBack }: RecipeDisplayPr
           </div>
 
           {/* Ingredients */}
-          <section className="flex flex-col gap-3">
+          <section className="flex flex-col gap-4">
             <h3 className="font-serif text-xl text-foreground">Ingredients</h3>
-            <div className="bg-card rounded-xl border border-border divide-y divide-border">
+            <div className="glass rounded-2xl divide-y divide-border/30">
               {recipe.ingredients.map((ingredient, index) => (
-                <div key={index} className="flex items-center gap-3 p-3">
-                  <span className="font-semibold text-primary min-w-[70px] text-sm">{ingredient.amount}</span>
+                <div key={index} className="flex items-center gap-3 p-4">
+                  <span className="font-bold text-primary min-w-[80px] text-sm">{ingredient.amount}</span>
                   <div className="flex-1">
                     <span className="text-foreground">{ingredient.name}</span>
                     {ingredient.notes && (
@@ -432,7 +443,7 @@ export function RecipeDisplay({ recipe: initialRecipe, onBack }: RecipeDisplayPr
           </section>
 
           {/* Steps Preview */}
-          <section className="flex flex-col gap-3">
+          <section className="flex flex-col gap-4">
             <h3 className="font-serif text-xl text-foreground">Steps</h3>
             <div className="flex flex-col gap-3">
               {recipe.steps.map((step, index) => (
@@ -442,19 +453,19 @@ export function RecipeDisplay({ recipe: initialRecipe, onBack }: RecipeDisplayPr
                     setCurrentStep(index)
                     setView('cooking')
                   }}
-                  className="flex gap-3 p-4 bg-card rounded-xl border border-border text-left hover:border-primary transition-colors"
+                  className="flex gap-3 p-4 glass rounded-2xl text-left hover:ring-2 hover:ring-primary/30 transition-all hover:scale-[1.01] active:scale-[0.99]"
                 >
-                  <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-medium ${
+                  <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-sm font-semibold ${
                     completedSteps.has(index) 
-                      ? 'bg-accent text-accent-foreground' 
-                      : 'bg-secondary text-foreground'
+                      ? 'bg-gradient-to-br from-accent to-primary text-white' 
+                      : 'bg-primary/10 text-primary'
                   }`}>
                     {completedSteps.has(index) ? <Check className="h-4 w-4" /> : step.stepNumber}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-foreground line-clamp-2">{step.instruction}</p>
                     {step.timing && (
-                      <p className="text-xs text-muted-foreground mt-1">{step.timing}</p>
+                      <p className="text-xs text-muted-foreground mt-1.5">{step.timing}</p>
                     )}
                   </div>
                   <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
@@ -465,11 +476,11 @@ export function RecipeDisplay({ recipe: initialRecipe, onBack }: RecipeDisplayPr
 
           {/* Pro Tips */}
           {recipe.proTips.length > 0 && (
-            <section className="flex flex-col gap-3">
+            <section className="flex flex-col gap-4">
               <h3 className="font-serif text-xl text-foreground">Pro Tips</h3>
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-3">
                 {recipe.proTips.map((tip, index) => (
-                  <div key={index} className="flex gap-3 p-4 bg-accent/10 rounded-xl border border-accent/20">
+                  <div key={index} className="flex gap-3 p-4 glass rounded-2xl border-l-4 border-accent">
                     <Lightbulb className="h-5 w-5 text-accent shrink-0" />
                     <p className="text-sm text-foreground leading-relaxed">{tip}</p>
                   </div>
@@ -481,11 +492,11 @@ export function RecipeDisplay({ recipe: initialRecipe, onBack }: RecipeDisplayPr
       </main>
 
       {/* Start Cooking Button */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 pb-8 bg-gradient-to-t from-background via-background to-transparent">
+      <div className="fixed bottom-0 left-0 right-0 p-4 pb-8 glass-strong">
         <Button
           size="lg"
           onClick={() => setView('cooking')}
-          className="w-full h-14 rounded-xl text-base font-semibold"
+          className="w-full h-14 rounded-2xl text-base font-semibold bg-gradient-to-r from-primary to-accent shadow-lg shadow-primary/25 hover:scale-[1.02] active:scale-[0.98] transition-transform"
         >
           Start Cooking
           <ChevronRight className="h-5 w-5 ml-1" />
