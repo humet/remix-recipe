@@ -4,15 +4,17 @@ import { useState } from 'react'
 import { RecipeInput } from '@/components/recipe-input'
 import { RecipeDisplay } from '@/components/recipe-display'
 import { ImprovementSuggestions } from '@/components/improvement-suggestions'
+import { ProcessingOverlay } from '@/components/processing-overlay'
 import { ImprovedRecipe, RecipeAnalysis, SuggestedImprovement } from '@/lib/recipe-types'
 
 type AppState = 'input' | 'suggestions' | 'result'
+type ProcessingType = 'analyzing' | 'improving' | null
 
 export default function Home() {
   const [appState, setAppState] = useState<AppState>('input')
   const [analysis, setAnalysis] = useState<RecipeAnalysis | null>(null)
   const [recipe, setRecipe] = useState<ImprovedRecipe | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
+  const [processingType, setProcessingType] = useState<ProcessingType>(null)
   const [error, setError] = useState<string | null>(null)
 
   // Step 1: Analyze the recipe and get suggestions
@@ -20,7 +22,7 @@ export default function Home() {
     text: string,
     images: { base64: string; mediaType: string }[]
   ) => {
-    setIsLoading(true)
+    setProcessingType('analyzing')
     setError(null)
 
     try {
@@ -46,7 +48,7 @@ export default function Home() {
       setError('Something went wrong. Please try again.')
       console.error('Error:', err)
     } finally {
-      setIsLoading(false)
+      setProcessingType(null)
     }
   }
 
@@ -57,7 +59,7 @@ export default function Home() {
   ) => {
     if (!analysis) return
     
-    setIsLoading(true)
+    setProcessingType('improving')
     setError(null)
 
     try {
@@ -87,7 +89,7 @@ export default function Home() {
       setError('Something went wrong. Please try again.')
       console.error('Error:', err)
     } finally {
-      setIsLoading(false)
+      setProcessingType(null)
     }
   }
 
@@ -109,6 +111,8 @@ export default function Home() {
     setError(null)
   }
 
+  const isLoading = processingType !== null
+
   // Render based on app state
   if (appState === 'result' && recipe) {
     return <RecipeDisplay recipe={recipe} onBack={analysis ? handleBackToSuggestions : handleBackToInput} />
@@ -116,18 +120,22 @@ export default function Home() {
 
   if (appState === 'suggestions' && analysis) {
     return (
-      <ImprovementSuggestions
-        analysis={analysis}
-        onApply={handleApplyImprovements}
-        onSkip={handleSkipImprovements}
-        onBack={handleBackToInput}
-        isLoading={isLoading}
-      />
+      <>
+        <ProcessingOverlay type="improving" isVisible={processingType === 'improving'} />
+        <ImprovementSuggestions
+          analysis={analysis}
+          onApply={handleApplyImprovements}
+          onSkip={handleSkipImprovements}
+          onBack={handleBackToInput}
+          isLoading={isLoading}
+        />
+      </>
     )
   }
 
   return (
     <main className="min-h-screen bg-background">
+      <ProcessingOverlay type="analyzing" isVisible={processingType === 'analyzing'} />
       <RecipeInput onImprove={handleAnalyzeRecipe} isLoading={isLoading} />
       
       {error && (

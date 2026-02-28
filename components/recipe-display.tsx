@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { ImprovedRecipe } from '@/lib/recipe-types'
 import { Button } from '@/components/ui/button'
+import { ProcessingOverlay } from '@/components/processing-overlay'
 import { 
   ArrowLeft, 
   Clock, 
@@ -16,7 +17,6 @@ import {
   Sparkles,
   Minus,
   Plus,
-  Loader2,
   X,
   Info
 } from 'lucide-react'
@@ -157,6 +157,7 @@ export function RecipeDisplay({ recipe: initialRecipe, onBack }: RecipeDisplayPr
 
     return (
       <div className="flex flex-col min-h-screen bg-background">
+        <ProcessingOverlay type="scaling" isVisible={isScaling} />
         {/* Cooking Mode Header */}
         <header className="sticky top-0 z-10 bg-background border-b border-border px-4 py-3">
           <div className="flex items-center justify-between">
@@ -261,6 +262,8 @@ export function RecipeDisplay({ recipe: initialRecipe, onBack }: RecipeDisplayPr
 
   return (
     <div className="flex flex-col min-h-screen bg-background pb-24">
+      <ProcessingOverlay type="scaling" isVisible={isScaling} />
+      
       {/* Header */}
       <header className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border px-4 py-3">
         <div className="flex items-center gap-3">
