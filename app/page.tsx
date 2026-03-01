@@ -43,16 +43,18 @@ export default function Home() {
         }),
       })
 
+      const data = await response.json()
+      
       if (!response.ok) {
-        throw new Error('Failed to analyze recipe')
+        throw new Error(data.error || 'Failed to analyze recipe')
       }
 
-      const data = await response.json()
       setAnalysis(data.analysis)
       setAppState('suggestions')
     } catch (err) {
-      setError('Something went wrong. Please try again.')
-      console.error('Error:', err)
+      const errorMessage = err instanceof Error ? err.message : 'Something went wrong'
+      setError(errorMessage)
+      console.error('[v0] Analyze error:', err)
     } finally {
       setProcessingType(null)
     }
