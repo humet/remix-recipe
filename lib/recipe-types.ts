@@ -4,11 +4,16 @@ export interface Ingredient {
   notes: string | null
 }
 
+export interface StepTiming {
+  label: string
+  duration: string
+}
+
 export interface RecipeStep {
   stepNumber: number
   instruction: string
   tips: string | null
-  timing: string | null
+  timings: StepTiming[]
 }
 
 export interface ImprovedRecipe {

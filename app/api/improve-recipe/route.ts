@@ -20,7 +20,12 @@ const improvedRecipeSchema = z.object({
       stepNumber: z.number().describe('Step number starting from 1'),
       instruction: z.string().describe('Clear, detailed instruction for this step. When any ingredient is mentioned, ALWAYS include the amount/measurement in parentheses immediately after the ingredient name, e.g., "Add the flour (200g) and sugar (100g) to the bowl"'),
       tips: z.string().nullable().describe('Optional helpful tip for this step'),
-      timing: z.string().nullable().describe('Optional timing for this step (e.g., "2-3 minutes")'),
+      timings: z.array(
+        z.object({
+          label: z.string().describe('Short label for what this timing is for (e.g., "Sauté onions", "Simmer sauce", "Rest meat")'),
+          duration: z.string().describe('Duration (e.g., "2-3 minutes", "15 minutes", "1 hour")'),
+        })
+      ).describe('Array of all timings mentioned in this step. Extract EVERY time reference. A step can have 0, 1, or multiple timings.'),
     })
   ).describe('Step-by-step instructions with inline measurements'),
   proTips: z.array(z.string()).describe('2-3 professional tips to elevate the dish'),

@@ -230,15 +230,6 @@ export function RecipeDisplay({ recipe: initialRecipe, onBack, onHome, savedReci
     }
   }
 
-  // Create a short descriptive label from the step instruction
-  const getTimerLabel = (instruction: string): string => {
-    // Get first 30 chars of instruction, cut at last word boundary
-    const shortened = instruction.slice(0, 40)
-    const lastSpace = shortened.lastIndexOf(' ')
-    const label = lastSpace > 20 ? shortened.slice(0, lastSpace) : shortened
-    return label + (instruction.length > 40 ? '...' : '')
-  }
-
   const handleRemoveIngredient = async (ingredient: Ingredient) => {
     setIsSwapping(true)
     setSwapSheetOpen(false)
@@ -368,18 +359,23 @@ export function RecipeDisplay({ recipe: initialRecipe, onBack, onHome, savedReci
         <main className="flex-1 p-5">
           <div className="flex flex-col gap-6">
             {/* Step Number Badge */}
-            <div className="flex items-center gap-3">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-accent text-white font-bold text-2xl shadow-lg shadow-primary/25">
+            <div className="flex items-start gap-3">
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-accent text-white font-bold text-2xl shadow-lg shadow-primary/25">
                 {step.stepNumber}
               </div>
-              {step.timing && (
-                <button
-                  onClick={() => timerHook.addTimer(getTimerLabel(step.instruction), step.timing!)}
-                  className="flex items-center gap-1.5 px-4 py-2 glass rounded-xl hover:ring-2 hover:ring-primary/30 transition-all active:scale-95"
-                >
-                  <Timer className="h-4 w-4 text-primary" />
-                  <span className="text-sm font-medium text-foreground">{step.timing}</span>
-                </button>
+              {step.timings && step.timings.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {step.timings.map((timing, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => timerHook.addTimer(timing.label, timing.duration)}
+                      className="flex items-center gap-1.5 px-3 py-2 glass rounded-xl hover:ring-2 hover:ring-primary/30 transition-all active:scale-95"
+                    >
+                      <Timer className="h-4 w-4 text-primary shrink-0" />
+                      <span className="text-sm font-medium text-foreground">{timing.duration}</span>
+                    </button>
+                  ))}
+                </div>
               )}
             </div>
 
