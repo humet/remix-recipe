@@ -75,10 +75,13 @@ export function SavedRecipes({ onSelect }: SavedRecipesProps) {
         {recipes.map((saved) => {
           const recipe = saved.recipe_data
           return (
-            <button
+            <div
               key={saved.id}
+              role="button"
+              tabIndex={0}
               onClick={() => onSelect(recipe, saved.id, saved.original_input, saved.original_analysis)}
-              className="w-full text-left glass rounded-2xl p-4 hover:ring-2 hover:ring-primary/30 transition-all active:scale-[0.98]"
+              onKeyDown={(e) => e.key === 'Enter' && onSelect(recipe, saved.id, saved.original_input, saved.original_analysis)}
+              className="w-full text-left glass rounded-2xl p-4 hover:ring-2 hover:ring-primary/30 transition-all active:scale-[0.98] cursor-pointer"
             >
               <div className="flex justify-between items-start gap-3">
                 <div className="flex-1 min-w-0">
@@ -116,7 +119,7 @@ export function SavedRecipes({ onSelect }: SavedRecipesProps) {
                 </div>
                 <span className="ml-auto">{formatDate(saved.created_at)}</span>
               </div>
-            </button>
+            </div>
           )
         })}
       </div>
