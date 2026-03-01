@@ -43,12 +43,12 @@ export default function Home() {
         }),
       })
 
-      const data = await response.json()
-      
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to analyze recipe')
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || `Request failed with status ${response.status}`)
       }
 
+      const data = await response.json()
       setAnalysis(data.analysis)
       setAppState('suggestions')
     } catch (err) {

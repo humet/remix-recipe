@@ -22,20 +22,14 @@ export async function POST(req: Request) {
       images: { base64: string; mediaType: string }[] 
     }
 
-    const messages: Array<{ role: 'user'; content: Array<{ type: string; text?: string; image?: string; mediaType?: string }> }> = [
-      {
-        role: 'user',
-        content: [],
-      },
-    ]
+    const content: Array<{ type: 'text'; text: string } | { type: 'image'; image: string }> = []
 
     // Add all images if provided
     if (images && images.length > 0) {
       for (const img of images) {
-        messages[0].content.push({
+        content.push({
           type: 'image',
-          image: img.base64,
-          mediaType: img.mediaType || 'image/jpeg',
+          image: `data:${img.mediaType || 'image/jpeg'};base64,${img.base64}`,
         })
       }
     }
@@ -43,7 +37,7 @@ export async function POST(req: Request) {
     const hasImages = images && images.length > 0
 
     // Add text prompt
-    messages[0].content.push({
+    content.push({
       type: 'text',
       text: `You are an expert chef and recipe analyst. Analyze the following recipe and suggest improvements.
 
@@ -68,15 +62,14 @@ ${recipeText ? `Recipe to analyze:\n${recipeText}` : 'Please extract and analyze
     })
 
     console.log('[v0] Calling generateText with model: google/gemini-3-flash')
-    console.log('[v0] Message count:', messages.length)
-    console.log('[v0] Content items:', messages[0].content.length)
+    console.log('[v0] Content items:', content.length)
 
     const { output } = await generateText({
       model: 'google/gemini-3-flash',
       output: Output.object({
         schema: analysisSchema,
       }),
-      messages,
+      messages: [{ role: 'user' as const, content }],
     })
 
     console.log('[v0] Output received:', !!output)
