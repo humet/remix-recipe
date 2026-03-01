@@ -61,9 +61,6 @@ Be specific and practical with your suggestions. Each suggestion should be actio
 ${recipeText ? `Recipe to analyze:\n${recipeText}` : 'Please extract and analyze the recipe from the images provided.'}`,
     })
 
-    console.log('[v0] Calling generateText with model: google/gemini-3-flash')
-    console.log('[v0] Content items:', content.length)
-
     const { output } = await generateText({
       model: 'google/gemini-3-flash',
       output: Output.object({
@@ -72,14 +69,11 @@ ${recipeText ? `Recipe to analyze:\n${recipeText}` : 'Please extract and analyze
       messages: [{ role: 'user' as const, content }],
     })
 
-    console.log('[v0] Output received:', !!output)
     return Response.json({ analysis: output })
   } catch (error) {
-    console.error('[v0] Error analyzing recipe:', error)
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-    console.error('[v0] Error details:', errorMessage)
+    console.error('Error analyzing recipe:', error)
     return Response.json(
-      { error: `Failed to analyze recipe: ${errorMessage}` },
+      { error: 'Failed to analyze recipe. Please try again.' },
       { status: 500 }
     )
   }

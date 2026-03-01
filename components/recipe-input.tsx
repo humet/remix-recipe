@@ -21,21 +21,44 @@ export function RecipeInput({ onImprove, isLoading }: RecipeInputProps) {
   const [images, setImages] = useState<ImageData[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const handleImageUpload = useCallback((file: File) => {
+  const compressImage = useCallback((file: File, maxWidth = 1200, quality = 0.7): Promise<{ base64: string; preview: string }> => {
+    return new Promise((resolve) => {
+      const img = new Image()
+      img.crossOrigin = 'anonymous'
+      img.onload = () => {
+        const canvas = document.createElement('canvas')
+        let { width, height } = img
+        
+        // Scale down if larger than maxWidth
+        if (width > maxWidth) {
+          height = (height * maxWidth) / width
+          width = maxWidth
+        }
+        
+        canvas.width = width
+        canvas.height = height
+        const ctx = canvas.getContext('2d')
+        ctx?.drawImage(img, 0, 0, width, height)
+        
+        const compressedDataUrl = canvas.toDataURL('image/jpeg', quality)
+        const base64 = compressedDataUrl.split(',')[1]
+        
+        resolve({ base64, preview: compressedDataUrl })
+      }
+      img.src = URL.createObjectURL(file)
+    })
+  }, [])
+
+  const handleImageUpload = useCallback(async (file: File) => {
     if (!file.type.startsWith('image/')) return
 
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      const result = e.target?.result as string
-      const base64 = result.split(',')[1]
-      setImages(prev => [...prev, { 
-        base64, 
-        mediaType: file.type,
-        preview: result 
-      }])
-    }
-    reader.readAsDataURL(file)
-  }, [])
+    const { base64, preview } = await compressImage(file)
+    setImages(prev => [...prev, { 
+      base64, 
+      mediaType: 'image/jpeg',
+      preview 
+    }])
+  }, [compressImage])
 
   const handlePaste = useCallback((e: React.ClipboardEvent) => {
     const items = e.clipboardData.items
