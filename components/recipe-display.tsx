@@ -34,7 +34,6 @@ import {
 
 interface RecipeDisplayProps {
   recipe: ImprovedRecipe
-  onBack: () => void
   onHome: () => void
   savedRecipeId?: string
   onSaved?: (id: string) => void
@@ -45,7 +44,7 @@ interface RecipeDisplayProps {
   isReimproved?: boolean
 }
 
-export function RecipeDisplay({ recipe: initialRecipe, onBack, onHome, savedRecipeId, onSaved, originalInput, originalAnalysis, onImproveFurther, onReimproveFromOriginal, isReimproved }: RecipeDisplayProps) {
+export function RecipeDisplay({ recipe: initialRecipe, onHome, savedRecipeId, onSaved, originalInput, originalAnalysis, onImproveFurther, onReimproveFromOriginal, isReimproved }: RecipeDisplayProps) {
   const [recipe, setRecipe] = useState(initialRecipe)
   const [currentStep, setCurrentStep] = useState(0)
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set())
@@ -452,13 +451,6 @@ export function RecipeDisplay({ recipe: initialRecipe, onBack, onHome, savedReci
       {/* Header */}
       <header className="sticky top-0 z-10 glass-strong px-4 py-3">
         <div className="flex items-center gap-3">
-          <button
-            onClick={onBack}
-            className="flex h-10 w-10 items-center justify-center rounded-full glass text-foreground hover:scale-105 active:scale-95 transition-transform"
-            aria-label="Go back"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </button>
           <h1 className="flex-1 text-lg font-semibold text-foreground truncate">{recipe.title}</h1>
           <button
             onClick={onHome}

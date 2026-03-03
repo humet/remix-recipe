@@ -22,6 +22,7 @@ export default function Home() {
   const [originalInput, setOriginalInput] = useState<string | undefined>(undefined)
   const [isReimproved, setIsReimproved] = useState(false)
   const [improveFromRecipe, setImproveFromRecipe] = useState<string | null>(null)
+  const [previousRecipe, setPreviousRecipe] = useState<ImprovedRecipe | null>(null)
 
   // Step 1: Analyze the recipe and get suggestions
   const handleAnalyzeRecipe = async (
@@ -116,6 +117,7 @@ export default function Home() {
     setOriginalInput(undefined)
     setIsReimproved(false)
     setImproveFromRecipe(null)
+    setPreviousRecipe(null)
     setRefreshKey(prev => prev + 1)
   }
 
@@ -136,14 +138,17 @@ export default function Home() {
     setSavedRecipeId(id)
   }
 
-  const handleBackToSuggestions = () => {
-    setAppState('suggestions')
-    setRecipe(null)
-    setError(null)
+  const handleBackToResult = () => {
+    if (previousRecipe) {
+      setRecipe(previousRecipe)
+      setAppState('result')
+      setPreviousRecipe(null)
+    }
   }
 
   const handleReimproveFromOriginal = () => {
     if (analysis) {
+      setPreviousRecipe(recipe)
       setRecipe(null)
       setIsReimproved(true)
       setImproveFromRecipe(null)
@@ -174,6 +179,7 @@ export default function Home() {
       const data = await response.json()
       setAnalysis(data.analysis)
       setImproveFromRecipe(serialized)
+      setPreviousRecipe(recipe)
       setRecipe(null)
       setIsReimproved(true)
       setAppState('suggestions')
@@ -195,7 +201,6 @@ export default function Home() {
         <ProcessingOverlay type="analyzing" isVisible={processingType === 'analyzing'} />
         <RecipeDisplay
           recipe={recipe}
-          onBack={analysis ? handleBackToSuggestions : handleBackToInput}
           onHome={handleBackToInput}
           savedRecipeId={savedRecipeId}
           onSaved={handleRecipeSaved}
@@ -217,7 +222,7 @@ export default function Home() {
           analysis={analysis}
           onApply={handleApplyImprovements}
           onSkip={handleSkipImprovements}
-          onBack={handleBackToInput}
+          onBack={previousRecipe ? handleBackToResult : undefined}
           onHome={handleBackToInput}
           isLoading={isLoading}
         />

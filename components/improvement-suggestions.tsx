@@ -25,7 +25,7 @@ interface ImprovementSuggestionsProps {
   analysis: RecipeAnalysis
   onApply: (selectedImprovements: SuggestedImprovement[], customRequest: string) => void
   onSkip: () => void
-  onBack: () => void
+  onBack?: () => void
   onHome: () => void
   isLoading: boolean
 }
@@ -90,13 +90,15 @@ export function ImprovementSuggestions({
       {/* Header */}
 <header className="sticky top-0 z-10 glass-strong border-b-0">
         <div className="flex items-center gap-3 px-5 py-4">
-          <button
-            onClick={onBack}
-            className="h-11 w-11 flex items-center justify-center rounded-full glass text-foreground hover:scale-105 active:scale-95 transition-transform"
-            aria-label="Go back"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </button>
+          {onBack && (
+            <button
+              onClick={onBack}
+              className="h-11 w-11 flex items-center justify-center rounded-full glass text-foreground hover:scale-105 active:scale-95 transition-transform"
+              aria-label="Go back"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+          )}
           <div className="flex-1 min-w-0">
             <h1 className="text-xl font-semibold text-foreground truncate">
               {analysis.title}
