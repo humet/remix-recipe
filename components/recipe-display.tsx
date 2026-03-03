@@ -363,7 +363,8 @@ export function RecipeDisplay({ recipe: initialRecipe, onBack, onHome, savedReci
               <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-accent text-white font-bold text-2xl shadow-lg shadow-primary/25">
                 {step.stepNumber}
               </div>
-              {step.timings && step.timings.length > 0 && (
+              {/* Timings - support both new array format and legacy string format */}
+              {(step.timings && step.timings.length > 0) ? (
                 <div className="flex flex-wrap gap-2">
                   {step.timings.map((timing, idx) => (
                     <button
@@ -376,7 +377,15 @@ export function RecipeDisplay({ recipe: initialRecipe, onBack, onHome, savedReci
                     </button>
                   ))}
                 </div>
-              )}
+              ) : step.timing ? (
+                <button
+                  onClick={() => timerHook.addTimer(`Step ${step.stepNumber}`, step.timing!)}
+                  className="flex items-center gap-1.5 px-3 py-2 glass rounded-xl hover:ring-2 hover:ring-primary/30 transition-all active:scale-95"
+                >
+                  <Timer className="h-4 w-4 text-primary shrink-0" />
+                  <span className="text-sm font-medium text-foreground">{step.timing}</span>
+                </button>
+              ) : null}
             </div>
 
             {/* Instruction */}

@@ -13,7 +13,8 @@ export interface RecipeStep {
   stepNumber: number
   instruction: string
   tips: string | null
-  timings: StepTiming[]
+  timings?: StepTiming[]
+  timing?: string | null // Legacy field for backward compatibility
 }
 
 export interface ImprovedRecipe {
