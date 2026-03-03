@@ -40,11 +40,12 @@ interface RecipeDisplayProps {
   onSaved?: (id: string) => void
   originalInput?: string
   originalAnalysis?: RecipeAnalysis | null
-  onReimprove?: () => void
+  onImproveFurther: () => void
+  onReimproveFromOriginal?: () => void
   isReimproved?: boolean
 }
 
-export function RecipeDisplay({ recipe: initialRecipe, onBack, onHome, savedRecipeId, onSaved, originalInput, originalAnalysis, onReimprove, isReimproved }: RecipeDisplayProps) {
+export function RecipeDisplay({ recipe: initialRecipe, onBack, onHome, savedRecipeId, onSaved, originalInput, originalAnalysis, onImproveFurther, onReimproveFromOriginal, isReimproved }: RecipeDisplayProps) {
   const [recipe, setRecipe] = useState(initialRecipe)
   const [currentStep, setCurrentStep] = useState(0)
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set())
@@ -512,16 +513,25 @@ export function RecipeDisplay({ recipe: initialRecipe, onBack, onHome, savedReci
             </div>
           )}
 
-          {/* Re-improve option */}
-          {originalAnalysis && onReimprove && (
+          {/* Improve further options */}
+          <div className="flex flex-col gap-2">
             <button
-              onClick={onReimprove}
-              className="flex items-center justify-center gap-2 p-4 glass rounded-2xl text-muted-foreground hover:text-foreground hover:ring-2 hover:ring-primary/30 transition-all"
+              onClick={onImproveFurther}
+              className="flex items-center justify-center gap-2 p-4 glass rounded-2xl bg-primary/5 text-foreground hover:ring-2 hover:ring-primary/30 transition-all"
             >
-              <Wand2 className="h-5 w-5" />
-              <span className="font-medium">Try different improvements</span>
+              <Sparkles className="h-5 w-5 text-primary" />
+              <span className="font-medium">Improve this recipe further</span>
             </button>
-          )}
+            {originalAnalysis && onReimproveFromOriginal && (
+              <button
+                onClick={onReimproveFromOriginal}
+                className="flex items-center justify-center gap-2 p-3 rounded-2xl text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all text-sm"
+              >
+                <Wand2 className="h-4 w-4" />
+                <span>Try different improvements on original</span>
+              </button>
+            )}
+          </div>
 
           {/* Scaling Notes */}
           {scalingNotes && scalingNotes.length > 0 && showScalingNotes && (

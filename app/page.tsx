@@ -6,7 +6,7 @@ import { RecipeDisplay } from '@/components/recipe-display'
 import { ImprovementSuggestions } from '@/components/improvement-suggestions'
 import { ProcessingOverlay } from '@/components/processing-overlay'
 import { SavedRecipes } from '@/components/saved-recipes'
-import { ImprovedRecipe, RecipeAnalysis, SuggestedImprovement } from '@/lib/recipe-types'
+import { ImprovedRecipe, RecipeAnalysis, SuggestedImprovement, serializeRecipe } from '@/lib/recipe-types'
 
 type AppState = 'input' | 'suggestions' | 'result'
 type ProcessingType = 'analyzing' | 'improving' | null
@@ -21,6 +21,7 @@ export default function Home() {
   const [refreshKey, setRefreshKey] = useState(0)
   const [originalInput, setOriginalInput] = useState<string | undefined>(undefined)
   const [isReimproved, setIsReimproved] = useState(false)
+  const [improveFromRecipe, setImproveFromRecipe] = useState<string | null>(null)
 
   // Step 1: Analyze the recipe and get suggestions
   const handleAnalyzeRecipe = async (
@@ -77,7 +78,7 @@ export default function Home() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          parsedRecipe: analysis.parsedRecipe,
+          parsedRecipe: improveFromRecipe ?? analysis.parsedRecipe,
           selectedImprovements: selectedImprovements.map(imp => ({
             title: imp.title,
             description: imp.description,
@@ -114,6 +115,7 @@ export default function Home() {
     setSavedRecipeId(undefined)
     setOriginalInput(undefined)
     setIsReimproved(false)
+    setImproveFromRecipe(null)
     setRefreshKey(prev => prev + 1)
   }
 
@@ -140,11 +142,47 @@ export default function Home() {
     setError(null)
   }
 
-  const handleReimprove = () => {
+  const handleReimproveFromOriginal = () => {
     if (analysis) {
       setRecipe(null)
       setIsReimproved(true)
+      setImproveFromRecipe(null)
       setAppState('suggestions')
+    }
+  }
+
+  const handleImproveFurther = async () => {
+    if (!recipe) return
+
+    setProcessingType('analyzing')
+    setError(null)
+
+    try {
+      const serialized = serializeRecipe(recipe)
+
+      const response = await fetch('/api/analyze-recipe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ recipeText: serialized, images: [] }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || `Request failed with status ${response.status}`)
+      }
+
+      const data = await response.json()
+      setAnalysis(data.analysis)
+      setImproveFromRecipe(serialized)
+      setRecipe(null)
+      setIsReimproved(true)
+      setAppState('suggestions')
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Something went wrong'
+      setError(errorMessage)
+      console.error('Improve further error:', err)
+    } finally {
+      setProcessingType(null)
     }
   }
 
@@ -153,17 +191,21 @@ export default function Home() {
   // Render based on app state
   if (appState === 'result' && recipe) {
     return (
-      <RecipeDisplay
-        recipe={recipe}
-        onBack={analysis ? handleBackToSuggestions : handleBackToInput}
-        onHome={handleBackToInput}
-        savedRecipeId={savedRecipeId}
-        onSaved={handleRecipeSaved}
-        originalInput={originalInput}
-        originalAnalysis={analysis}
-        onReimprove={analysis ? handleReimprove : undefined}
-        isReimproved={isReimproved}
-      />
+      <>
+        <ProcessingOverlay type="analyzing" isVisible={processingType === 'analyzing'} />
+        <RecipeDisplay
+          recipe={recipe}
+          onBack={analysis ? handleBackToSuggestions : handleBackToInput}
+          onHome={handleBackToInput}
+          savedRecipeId={savedRecipeId}
+          onSaved={handleRecipeSaved}
+          originalInput={originalInput}
+          originalAnalysis={analysis}
+          onImproveFurther={handleImproveFurther}
+          onReimproveFromOriginal={analysis ? handleReimproveFromOriginal : undefined}
+          isReimproved={isReimproved}
+        />
+      </>
     )
   }
 
