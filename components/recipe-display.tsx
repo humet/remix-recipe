@@ -5,6 +5,7 @@ import { ImprovedRecipe, Ingredient, RecipeAnalysis } from '@/lib/recipe-types'
 import { Button } from '@/components/ui/button'
 import { ProcessingOverlay } from '@/components/processing-overlay'
 import { IngredientSwapSheet } from '@/components/ingredient-swap-sheet'
+import { RecipeQASheet } from '@/components/recipe-qa-sheet'
 import { TimerBar } from '@/components/timer-bar'
 import { useTimers } from '@/hooks/use-timers'
 import { createClient } from '@/lib/supabase/client'
@@ -29,7 +30,8 @@ import {
   Bookmark,
   BookmarkCheck,
   Wand2,
-  Home
+  Home,
+  MessageCircle
 } from 'lucide-react'
 
 interface RecipeDisplayProps {
@@ -179,6 +181,9 @@ export function RecipeDisplay({ recipe: initialRecipe, onHome, savedRecipeId, on
       setIsSaving(false)
     }
   }
+
+  // Q&A sheet state
+  const [qaSheetOpen, setQaSheetOpen] = useState(false)
 
   // Ingredient swap state
   const [swapSheetOpen, setSwapSheetOpen] = useState(false)
@@ -440,6 +445,20 @@ export function RecipeDisplay({ recipe: initialRecipe, onHome, savedRecipeId, on
             )}
           </div>
         </footer>
+
+        {/* Q&A FAB */}
+        <button
+          onClick={() => setQaSheetOpen(true)}
+          className="fixed bottom-24 right-5 z-30 h-14 w-14 flex items-center justify-center rounded-full bg-gradient-to-r from-primary to-accent text-white shadow-lg shadow-primary/25 hover:scale-110 active:scale-95 transition-transform"
+          aria-label="Ask about this recipe"
+        >
+          <MessageCircle className="h-6 w-6" />
+        </button>
+        <RecipeQASheet
+          isOpen={qaSheetOpen}
+          onClose={() => setQaSheetOpen(false)}
+          recipeContext={getRecipeContext()}
+        />
       </div>
     )
   }
@@ -746,6 +765,20 @@ export function RecipeDisplay({ recipe: initialRecipe, onHome, savedRecipeId, on
           <ChevronRight className="h-5 w-5 ml-1" />
         </Button>
       </div>
+
+      {/* Q&A FAB */}
+      <button
+        onClick={() => setQaSheetOpen(true)}
+        className="fixed bottom-24 right-5 z-30 h-14 w-14 flex items-center justify-center rounded-full bg-gradient-to-r from-primary to-accent text-white shadow-lg shadow-primary/25 hover:scale-110 active:scale-95 transition-transform"
+        aria-label="Ask about this recipe"
+      >
+        <MessageCircle className="h-6 w-6" />
+      </button>
+      <RecipeQASheet
+        isOpen={qaSheetOpen}
+        onClose={() => setQaSheetOpen(false)}
+        recipeContext={getRecipeContext()}
+      />
 
       {/* Ingredient Swap Sheet */}
       {selectedIngredient && (
