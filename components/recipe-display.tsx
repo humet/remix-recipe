@@ -185,6 +185,11 @@ export function RecipeDisplay({ recipe: initialRecipe, onHome, savedRecipeId, on
   // Q&A sheet state
   const [qaSheetOpen, setQaSheetOpen] = useState(false)
 
+  const handleChatRecipeUpdate = (newRecipe: ImprovedRecipe) => {
+    setRecipe(newRecipe)
+    setIsSaved(false)
+  }
+
   // Ingredient swap state
   const [swapSheetOpen, setSwapSheetOpen] = useState(false)
   const [selectedIngredient, setSelectedIngredient] = useState<Ingredient | null>(null)
@@ -458,6 +463,8 @@ export function RecipeDisplay({ recipe: initialRecipe, onHome, savedRecipeId, on
           isOpen={qaSheetOpen}
           onClose={() => setQaSheetOpen(false)}
           recipeContext={getRecipeContext()}
+          recipe={recipe}
+          onRecipeUpdate={handleChatRecipeUpdate}
         />
       </div>
     )
@@ -778,6 +785,8 @@ export function RecipeDisplay({ recipe: initialRecipe, onHome, savedRecipeId, on
         isOpen={qaSheetOpen}
         onClose={() => setQaSheetOpen(false)}
         recipeContext={getRecipeContext()}
+        recipe={recipe}
+        onRecipeUpdate={handleChatRecipeUpdate}
       />
 
       {/* Ingredient Swap Sheet */}

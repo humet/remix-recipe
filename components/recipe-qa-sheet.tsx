@@ -2,13 +2,16 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { useChat } from '@ai-sdk/react'
-import { DefaultChatTransport } from 'ai'
-import { X, MessageCircle, Send, Loader2, AlertCircle } from 'lucide-react'
+import { DefaultChatTransport, lastAssistantMessageIsCompleteWithApprovalResponses } from 'ai'
+import { X, MessageCircle, Send, Loader2, AlertCircle, Sparkles, Check } from 'lucide-react'
+import { ImprovedRecipe } from '@/lib/recipe-types'
 
 interface RecipeQASheetProps {
   isOpen: boolean
   onClose: () => void
   recipeContext: string
+  recipe: ImprovedRecipe
+  onRecipeUpdate: (recipe: ImprovedRecipe) => void
 }
 
 const SUGGESTED_QUESTIONS = [
@@ -18,15 +21,17 @@ const SUGGESTED_QUESTIONS = [
   'How do I store leftovers?',
 ]
 
-export function RecipeQASheet({ isOpen, onClose, recipeContext }: RecipeQASheetProps) {
+export function RecipeQASheet({ isOpen, onClose, recipeContext, recipe, onRecipeUpdate }: RecipeQASheetProps) {
   const [input, setInput] = useState('')
   const scrollRef = useRef<HTMLDivElement>(null)
+  const [appliedToolCallIds] = useState(() => new Set<string>())
 
-  const { messages, sendMessage, status, setMessages, stop, error } = useChat({
+  const { messages, sendMessage, status, setMessages, stop, error, addToolApprovalResponse } = useChat({
     transport: new DefaultChatTransport({
       api: '/api/ask-recipe',
-      body: { recipeContext },
+      body: { recipeContext, recipe },
     }),
+    sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithApprovalResponses,
   })
 
   const isReady = status === 'ready'
@@ -37,6 +42,26 @@ export function RecipeQASheet({ isOpen, onClose, recipeContext }: RecipeQASheetP
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight
     }
   }, [messages, status])
+
+  // Auto-apply recipe updates when tool output becomes available
+  useEffect(() => {
+    for (const message of messages) {
+      if (message.role !== 'assistant' || !message.parts) continue
+      for (const part of message.parts) {
+        if (
+          part.type === 'tool-modifyRecipe' &&
+          part.state === 'output-available' &&
+          !appliedToolCallIds.has(part.toolCallId)
+        ) {
+          appliedToolCallIds.add(part.toolCallId)
+          const output = part.output as { recipe?: ImprovedRecipe; error?: string }
+          if (output?.recipe) {
+            onRecipeUpdate(output.recipe)
+          }
+        }
+      }
+    }
+  }, [messages, appliedToolCallIds, onRecipeUpdate])
 
   const handleClose = () => {
     if (status === 'streaming' || status === 'submitted') {
@@ -117,12 +142,12 @@ export function RecipeQASheet({ isOpen, onClose, recipeContext }: RecipeQASheetP
             ) : (
               <div className="flex flex-col gap-3">
                 {messages.map((message) => {
-                  const text = message.parts
-                    ?.filter((p): p is { type: 'text'; text: string } => p.type === 'text')
-                    .map((p) => p.text)
-                    .join('') || ''
-
                   if (message.role === 'user') {
+                    const text = message.parts
+                      ?.filter((p): p is { type: 'text'; text: string } => p.type === 'text')
+                      .map((p) => p.text)
+                      .join('') || ''
+
                     return (
                       <div key={message.id} className="flex justify-end">
                         <div className="max-w-[80%] px-4 py-2.5 rounded-2xl rounded-br-md bg-gradient-to-r from-primary to-accent text-white text-sm leading-relaxed">
@@ -132,18 +157,56 @@ export function RecipeQASheet({ isOpen, onClose, recipeContext }: RecipeQASheetP
                     )
                   }
 
+                  // Assistant message — render each part
                   return (
-                    <div key={message.id} className="flex justify-start">
-                      <div className="max-w-[85%] px-4 py-2.5 rounded-2xl rounded-bl-md glass text-foreground text-sm leading-relaxed whitespace-pre-wrap">
-                        {text || (
-                          /* Pulsing dots for submitted state (waiting for first token) */
-                          <span className="flex gap-1 items-center py-1">
-                            <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/50 animate-pulse" />
-                            <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/50 animate-pulse [animation-delay:150ms]" />
-                            <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/50 animate-pulse [animation-delay:300ms]" />
-                          </span>
-                        )}
-                      </div>
+                    <div key={message.id} className="flex flex-col gap-2">
+                      {message.parts?.map((part, partIndex) => {
+                        if (part.type === 'text') {
+                          if (!part.text) return null
+                          return (
+                            <div key={partIndex} className="flex justify-start">
+                              <div className="max-w-[85%] px-4 py-2.5 rounded-2xl rounded-bl-md glass text-foreground text-sm leading-relaxed whitespace-pre-wrap">
+                                {part.text}
+                              </div>
+                            </div>
+                          )
+                        }
+
+                        if (part.type === 'tool-modifyRecipe') {
+                          return (
+                            <div key={partIndex} className="flex justify-start">
+                              <div className="max-w-[85%] w-full">
+                                <ToolApprovalCard
+                                  part={part}
+                                  onApprove={(approvalId) => addToolApprovalResponse({ id: approvalId, approved: true })}
+                                  onDeny={(approvalId) => addToolApprovalResponse({ id: approvalId, approved: false, reason: 'User declined' })}
+                                />
+                              </div>
+                            </div>
+                          )
+                        }
+
+                        if (part.type === 'step-start') {
+                          return null
+                        }
+
+                        return null
+                      })}
+
+                      {/* Show loading dots if assistant message has no visible content yet */}
+                      {!message.parts?.some(p =>
+                        (p.type === 'text' && p.text) || p.type === 'tool-modifyRecipe'
+                      ) && (
+                        <div className="flex justify-start">
+                          <div className="max-w-[85%] px-4 py-2.5 rounded-2xl rounded-bl-md glass text-foreground text-sm leading-relaxed">
+                            <span className="flex gap-1 items-center py-1">
+                              <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/50 animate-pulse" />
+                              <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/50 animate-pulse [animation-delay:150ms]" />
+                              <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/50 animate-pulse [animation-delay:300ms]" />
+                            </span>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )
                 })}
@@ -188,4 +251,87 @@ export function RecipeQASheet({ isOpen, onClose, recipeContext }: RecipeQASheetP
       </div>
     </>
   )
+}
+
+function ToolApprovalCard({
+  part,
+  onApprove,
+  onDeny,
+}: {
+  part: { state: string; toolCallId: string; input?: unknown; output?: unknown; errorText?: string; approval?: { id: string; approved?: boolean } }
+  onApprove: (approvalId: string) => void
+  onDeny: (approvalId: string) => void
+}) {
+  if (part.state === 'approval-requested') {
+    return (
+      <div className="glass rounded-2xl p-4 border border-primary/20">
+        <div className="flex items-center gap-2 mb-3">
+          <Sparkles className="h-4 w-4 text-primary" />
+          <span className="text-sm font-medium text-foreground">Apply to your recipe?</span>
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={() => onApprove(part.approval!.id)}
+            className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-gradient-to-r from-primary to-accent text-white text-sm font-medium hover:scale-[1.02] active:scale-[0.98] transition-transform"
+          >
+            <Check className="h-4 w-4" />
+            Yes, apply
+          </button>
+          <button
+            onClick={() => onDeny(part.approval!.id)}
+            className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl glass text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <X className="h-4 w-4" />
+            No thanks
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  if (part.state === 'approval-responded' || part.state === 'input-available') {
+    return (
+      <div className="glass rounded-2xl p-4 border border-primary/20">
+        <div className="flex items-center gap-2">
+          <Loader2 className="h-4 w-4 text-primary animate-spin" />
+          <span className="text-sm text-muted-foreground">Applying changes...</span>
+        </div>
+      </div>
+    )
+  }
+
+  if (part.state === 'output-available') {
+    return (
+      <div className="glass rounded-2xl p-4 border border-accent/30">
+        <div className="flex items-center gap-2">
+          <Check className="h-4 w-4 text-accent" />
+          <span className="text-sm font-medium text-foreground">Changes applied</span>
+        </div>
+      </div>
+    )
+  }
+
+  if (part.state === 'output-error') {
+    return (
+      <div className="glass rounded-2xl p-4 border border-destructive/30">
+        <div className="flex items-center gap-2">
+          <AlertCircle className="h-4 w-4 text-destructive" />
+          <span className="text-sm text-destructive">Failed to apply changes. Try again.</span>
+        </div>
+      </div>
+    )
+  }
+
+  if (part.state === 'output-denied') {
+    return (
+      <div className="glass rounded-2xl p-4 border border-border/30">
+        <div className="flex items-center gap-2">
+          <X className="h-4 w-4 text-muted-foreground" />
+          <span className="text-sm text-muted-foreground">Change declined</span>
+        </div>
+      </div>
+    )
+  }
+
+  return null
 }
