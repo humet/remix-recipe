@@ -35,8 +35,6 @@ Paste or photograph a recipe, pick from AI-suggested improvements, then interact
 - Node.js 18+
 - pnpm
 - A [Supabase](https://supabase.com) project
-- A [Google AI](https://ai.google.dev) API key (for Gemini)
-
 ### Setup
 
 1. Clone the repository:
@@ -52,8 +50,10 @@ Paste or photograph a recipe, pick from AI-suggested improvements, then interact
    ```
    NEXT_PUBLIC_SUPABASE_URL=your-supabase-project-url
    NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
-   GOOGLE_GENERATIVE_AI_API_KEY=your-google-ai-key
+   AI_GATEWAY_API_KEY=your-ai-gateway-key
    ```
+
+   AI model requests (`google/gemini-3-flash`) are routed through the Vercel AI Gateway.
 
 3. Set up the database by running `scripts/001_create_saved_recipes.sql` in your Supabase SQL editor.
 

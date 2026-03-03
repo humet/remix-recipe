@@ -71,8 +71,10 @@ Recipe steps support both legacy `timing?: string` and current `timings?: StepTi
 ```
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
-GOOGLE_GENERATIVE_AI_API_KEY=
+AI_GATEWAY_API_KEY=
 ```
+
+AI model requests (`google/gemini-3-flash`) are routed through the Vercel AI Gateway.
 
 ## Conventions
 
