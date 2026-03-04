@@ -13,6 +13,8 @@ Paste or photograph a recipe, pick from AI-suggested improvements, then interact
 - **Ingredient swaps** — get AI-suggested alternatives for any ingredient and apply them throughout
 - **Ingredient removal** — adapt the recipe to work without a specific ingredient
 - **Cooking timers** — per-step timers with Web Audio beeps, notifications, wake lock, and vibration
+- **Push notifications** — timer alerts via web push even when the app is backgrounded or the phone is locked (iOS PWA supported)
+- **Offline support** — service worker caches the app shell for offline loading
 - **Save recipes** — persist improved recipes to Supabase
 - **Dark mode** — full light/dark theme support
 
@@ -26,6 +28,7 @@ Paste or photograph a recipe, pick from AI-suggested improvements, then interact
 | UI Components | shadcn/ui (Radix primitives) |
 | Validation | Zod |
 | Database | Supabase (PostgreSQL) |
+| Push | web-push (VAPID) + Service Worker |
 | Package Manager | pnpm |
 
 ## Getting Started
@@ -51,11 +54,19 @@ Paste or photograph a recipe, pick from AI-suggested improvements, then interact
    NEXT_PUBLIC_SUPABASE_URL=your-supabase-project-url
    NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
    AI_GATEWAY_API_KEY=your-ai-gateway-key
+
+   # Push notifications (optional — generate keys with: npx web-push generate-vapid-keys)
+   NEXT_PUBLIC_VAPID_PUBLIC_KEY=your-vapid-public-key
+   VAPID_PRIVATE_KEY=your-vapid-private-key
+   VAPID_SUBJECT=mailto:your-email@example.com
+   CRON_SECRET=your-cron-secret
    ```
 
    AI model requests (`google/gemini-3-flash`) are routed through the Vercel AI Gateway.
 
-3. Set up the database by running `scripts/001_create_saved_recipes.sql` in your Supabase SQL editor.
+3. Set up the database by running the migration scripts in your Supabase SQL editor:
+   - `scripts/001_create_saved_recipes.sql`
+   - `scripts/002_create_push_timers.sql`
 
 4. Start the dev server:
 
@@ -77,7 +88,7 @@ pnpm lint     # Run ESLint
 ```
 app/
   page.tsx              # Main app (input → suggestions → result state machine)
-  api/                  # AI-powered API routes (analyze, improve, scale, swap, remove)
+  api/                  # AI-powered API routes (analyze, improve, scale, swap, remove, timer-push)
   layout.tsx            # Root layout with metadata and fonts
 components/
   recipe-input.tsx      # Text/image recipe input
@@ -86,10 +97,14 @@ components/
   saved-recipes.tsx     # Saved recipe list
   ui/                   # shadcn/ui component library
 hooks/
-  use-timers.ts         # Multi-timer system with audio/notifications
+  use-timers.ts         # Multi-timer system with audio/notifications/push
 lib/
+  push-utils.ts         # VAPID key conversion utility
   recipe-types.ts       # Core TypeScript interfaces
   supabase/             # Supabase client setup (browser, SSR, middleware)
+public/
+  sw.js                 # Service worker (caching + push notifications)
 scripts/
   001_create_saved_recipes.sql
+  002_create_push_timers.sql
 ```

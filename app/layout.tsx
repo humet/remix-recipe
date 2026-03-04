@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
+import { Providers } from '@/components/providers'
 import './globals.css'
 
 const inter = Inter({ 
@@ -49,7 +50,7 @@ export default function RootLayout({
     <html lang="en" className="bg-background">
       <body className={`${inter.variable} font-sans antialiased`}>
         <div className="gradient-bg" aria-hidden="true" />
-        {children}
+        <Providers>{children}</Providers>
       </body>
     </html>
   )

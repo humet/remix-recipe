@@ -8,6 +8,7 @@ import { IngredientSwapSheet } from '@/components/ingredient-swap-sheet'
 import { RecipeQASheet } from '@/components/recipe-qa-sheet'
 import { TimerBar } from '@/components/timer-bar'
 import { useTimers } from '@/hooks/use-timers'
+import { usePush } from '@/components/providers'
 import { createClient } from '@/lib/supabase/client'
 import { 
   ArrowLeft, 
@@ -131,8 +132,9 @@ export function RecipeDisplay({ recipe: initialRecipe, onHome, savedRecipeId, on
     setScalingNotes(null)
   }
 
-  // Timer hook
-  const timerHook = useTimers()
+  // Push subscription & timer hook
+  const { subscription: pushSubscription, isSupported: pushSupported, subscribe: subscribePush } = usePush()
+  const timerHook = useTimers(pushSubscription)
 
   // Save state
   const [isSaved, setIsSaved] = useState(!!savedRecipeId && !isReimproved)
@@ -393,6 +395,7 @@ export function RecipeDisplay({ recipe: initialRecipe, onHome, savedRecipeId, on
                       <button
                         key={idx}
                         onClick={() => {
+                          if (pushSupported && !pushSubscription) subscribePush()
                           timerHook.addTimer(timing.label, timing.duration)
                           if (!timerHintSeen) dismissTimerHint()
                         }}
@@ -408,6 +411,7 @@ export function RecipeDisplay({ recipe: initialRecipe, onHome, savedRecipeId, on
               ) : step.timing ? (
                 <button
                   onClick={() => {
+                    if (pushSupported && !pushSubscription) subscribePush()
                     timerHook.addTimer(`Step ${step.stepNumber}`, step.timing!)
                     if (!timerHintSeen) dismissTimerHint()
                   }}
@@ -810,7 +814,7 @@ export function RecipeDisplay({ recipe: initialRecipe, onHome, savedRecipeId, on
       {/* Q&A FAB */}
       <button
         onClick={() => setQaSheetOpen(true)}
-        className="fixed bottom-24 right-5 z-30 h-14 w-14 flex items-center justify-center rounded-full bg-gradient-to-r from-primary to-accent text-white shadow-lg shadow-primary/25 hover:scale-110 active:scale-95 transition-transform"
+        className="fixed bottom-28 right-5 z-30 h-14 w-14 flex items-center justify-center rounded-full bg-gradient-to-r from-primary to-accent text-white shadow-lg shadow-primary/25 hover:scale-110 active:scale-95 transition-transform"
         aria-label="Ask about this recipe"
       >
         <MessageCircle className="h-6 w-6" />
