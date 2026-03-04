@@ -8,3 +8,15 @@ node_modules/
 .next/
 .env*.local
 .DS_Store
+
+temp/
+
+# Next.js
+next-env.d.ts
+
+# TypeScript
+*.tsbuildinfo
+
+# Claude Code (local/personal files)
+.claude/settings.local.json
+.claude/memory/
