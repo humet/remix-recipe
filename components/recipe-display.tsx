@@ -473,10 +473,10 @@ export function RecipeDisplay({ recipe: initialRecipe, onHome, savedRecipeId, on
           </div>
         </footer>
 
-        {/* Q&A FAB */}
+        {/* Q&A FAB - push up when timer bar is visible */}
         <button
           onClick={() => setQaSheetOpen(true)}
-          className="fixed bottom-24 right-5 z-30 h-14 w-14 flex items-center justify-center rounded-full bg-gradient-to-r from-primary to-accent text-white shadow-lg shadow-primary/25 hover:scale-110 active:scale-95 transition-transform"
+          className={`fixed right-5 z-30 h-14 w-14 flex items-center justify-center rounded-full bg-gradient-to-r from-primary to-accent text-white shadow-lg shadow-primary/25 hover:scale-110 active:scale-95 transition-all ${timerHook.timers.length > 0 ? 'bottom-48' : 'bottom-28'}`}
           aria-label="Ask about this recipe"
         >
           <MessageCircle className="h-6 w-6" />

@@ -31,7 +31,7 @@ export function TimerBar({ timers, pauseTimer, resumeTimer, removeTimer, resetTi
     .sort((a, b) => a.remainingSeconds - b.remainingSeconds)[0]
 
   return (
-    <div className="fixed bottom-24 left-4 right-4 z-40 flex flex-col gap-2">
+    <div className="fixed bottom-28 left-4 right-4 z-40 flex flex-col gap-2">
       {/* Expanded view - all timers */}
       {expanded && (
         <div className="glass-strong rounded-2xl p-3 animate-slide-up max-h-60 overflow-y-auto">
