@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { ImprovedRecipe, Ingredient, RecipeAnalysis } from '@/lib/recipe-types'
 import { Button } from '@/components/ui/button'
 import { ProcessingOverlay } from '@/components/processing-overlay'
@@ -27,6 +27,7 @@ import {
   Loader2,
   RefreshCw,
   Timer,
+  Play,
   Bookmark,
   BookmarkCheck,
   Wand2,
@@ -51,7 +52,17 @@ export function RecipeDisplay({ recipe: initialRecipe, onHome, savedRecipeId, on
   const [currentStep, setCurrentStep] = useState(0)
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set())
   const [view, setView] = useState<'overview' | 'cooking'>('overview')
-  
+
+  // First-time timer hint
+  const [timerHintSeen, setTimerHintSeen] = useState(true) // default true to avoid flash
+  useEffect(() => {
+    setTimerHintSeen(localStorage.getItem('timer-hint-seen') === 'true')
+  }, [])
+  const dismissTimerHint = () => {
+    setTimerHintSeen(true)
+    localStorage.setItem('timer-hint-seen', 'true')
+  }
+
   // Portion scaling state
   const [isScaling, setIsScaling] = useState(false)
   const [scalingNotes, setScalingNotes] = useState<string[] | null>(null)
@@ -376,24 +387,35 @@ export function RecipeDisplay({ recipe: initialRecipe, onHome, savedRecipeId, on
               {/* Timings - support both new array format and legacy string format */}
               {(step.timings && step.timings.length > 0) ? (
                 <div className="flex flex-wrap gap-2">
-                  {step.timings.map((timing, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => timerHook.addTimer(timing.label, timing.duration)}
-                      className="flex items-center gap-1.5 px-3 py-2 glass rounded-xl hover:ring-2 hover:ring-primary/30 transition-all active:scale-95"
-                    >
-                      <Timer className="h-4 w-4 text-primary shrink-0" />
-                      <span className="text-sm font-medium text-foreground">{timing.duration}</span>
-                    </button>
-                  ))}
+                  {step.timings.map((timing, idx) => {
+                    const isFirstTimer = idx === 0 && currentStep === 0 && !timerHintSeen
+                    return (
+                      <button
+                        key={idx}
+                        onClick={() => {
+                          timerHook.addTimer(timing.label, timing.duration)
+                          if (!timerHintSeen) dismissTimerHint()
+                        }}
+                        className={`flex items-center gap-1.5 px-3 py-2 glass rounded-xl ring-1 ring-primary/20 hover:ring-2 hover:ring-primary/30 transition-all active:scale-95 ${isFirstTimer ? 'ring-2 ring-primary/30' : ''}`}
+                      >
+                        <Play className="h-4 w-4 text-primary shrink-0" />
+                        <span className="text-sm font-medium text-foreground">{timing.duration}</span>
+                        {isFirstTimer && <span className="text-xs text-primary ml-1">Tap to start timer</span>}
+                      </button>
+                    )
+                  })}
                 </div>
               ) : step.timing ? (
                 <button
-                  onClick={() => timerHook.addTimer(`Step ${step.stepNumber}`, step.timing!)}
-                  className="flex items-center gap-1.5 px-3 py-2 glass rounded-xl hover:ring-2 hover:ring-primary/30 transition-all active:scale-95"
+                  onClick={() => {
+                    timerHook.addTimer(`Step ${step.stepNumber}`, step.timing!)
+                    if (!timerHintSeen) dismissTimerHint()
+                  }}
+                  className={`flex items-center gap-1.5 px-3 py-2 glass rounded-xl ring-1 ring-primary/20 hover:ring-2 hover:ring-primary/30 transition-all active:scale-95 ${currentStep === 0 && !timerHintSeen ? 'ring-2 ring-primary/30' : ''}`}
                 >
-                  <Timer className="h-4 w-4 text-primary shrink-0" />
+                  <Play className="h-4 w-4 text-primary shrink-0" />
                   <span className="text-sm font-medium text-foreground">{step.timing}</span>
+                  {currentStep === 0 && !timerHintSeen && <span className="text-xs text-primary ml-1">Tap to start timer</span>}
                 </button>
               ) : null}
             </div>
@@ -734,9 +756,21 @@ export function RecipeDisplay({ recipe: initialRecipe, onHome, savedRecipeId, on
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-foreground line-clamp-2">{step.instruction}</p>
-                    {step.timing && (
-                      <p className="text-xs text-muted-foreground mt-1.5">{step.timing}</p>
-                    )}
+                    {(step.timings && step.timings.length > 0) ? (
+                      <div className="flex flex-wrap gap-1.5 mt-1.5">
+                        {step.timings.map((timing, idx) => (
+                          <span key={idx} className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                            <Timer className="h-3 w-3" />
+                            {timing.duration}
+                          </span>
+                        ))}
+                      </div>
+                    ) : step.timing ? (
+                      <span className="inline-flex items-center gap-1 text-xs text-muted-foreground mt-1.5">
+                        <Timer className="h-3 w-3" />
+                        {step.timing}
+                      </span>
+                    ) : null}
                   </div>
                   <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
                 </button>

@@ -41,34 +41,57 @@ export function useTimers() {
   const [timers, setTimers] = useState<Timer[]>([])
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
   const audioContextRef = useRef<AudioContext | null>(null)
+  const wakeLockRef = useRef<WakeLockSentinel | null>(null)
 
-  // Initialize audio context on client side
+  // Cleanup interval on unmount
   useEffect(() => {
-    // Request notification permission
-    if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission()
-    }
-
     return () => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current)
       }
     }
   }, [])
-  
+
   // Request wake lock when timers are running
+  const hasRunningTimers = timers.some(t => t.isRunning && !t.isComplete)
+
   useEffect(() => {
     const requestWakeLock = async () => {
-      if ('wakeLock' in navigator && timers.some(t => t.isRunning)) {
+      if (!('wakeLock' in navigator)) return
+      if (hasRunningTimers && !wakeLockRef.current) {
         try {
-          await (navigator as any).wakeLock.request('screen')
-        } catch (err) {
+          const sentinel = await navigator.wakeLock.request('screen')
+          wakeLockRef.current = sentinel
+          sentinel.addEventListener('release', () => {
+            wakeLockRef.current = null
+          })
+        } catch {
           // Wake lock not available
         }
+      } else if (!hasRunningTimers && wakeLockRef.current) {
+        wakeLockRef.current.release()
+        wakeLockRef.current = null
       }
     }
+
     requestWakeLock()
-  }, [timers])
+
+    // Re-acquire wake lock when page becomes visible again (e.g. after phone unlock)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && hasRunningTimers && !wakeLockRef.current) {
+        requestWakeLock()
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      if (!hasRunningTimers && wakeLockRef.current) {
+        wakeLockRef.current.release()
+        wakeLockRef.current = null
+      }
+    }
+  }, [hasRunningTimers])
 
   // Main timer tick
   useEffect(() => {
@@ -162,6 +185,11 @@ export function useTimers() {
   const addTimer = useCallback((label: string, timeString: string) => {
     const seconds = parseTimeString(timeString)
     if (seconds <= 0) return null
+
+    // Request notification permission on first timer start (higher grant rate)
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission()
+    }
 
     const id = `timer-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
     const newTimer: Timer = {
