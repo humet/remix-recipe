@@ -23,7 +23,7 @@ export async function POST(request: Request) {
     // Schedule QStash message to call /api/timer-push/send at fire_at
     const { messageId } = await qstash.publishJSON({
       url: `${baseUrl}/api/timer-push/send`,
-      body: { timerId, label, subscription },
+      body: { timerId, label, subscription, appUrl: baseUrl },
       delay: delaySeconds,
     })
 

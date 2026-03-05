@@ -33,17 +33,23 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
   }
 
-  const { timerId, label, subscription } = JSON.parse(body)
+  const { timerId, label, subscription, appUrl } = JSON.parse(body)
+
+  // Use Declarative Web Push format (RFC 8030) — Safari handles natively,
+  // other browsers fall back to the SW push event handler
+  const payload = JSON.stringify({
+    web_push: '8030',
+    notification: {
+      title: 'Timer Complete',
+      body: `${label} is done!`,
+      navigate_url: appUrl || 'https://localhost:3000',
+      tag: `timer-${timerId}`,
+      sound: 'default',
+    },
+  })
 
   try {
-    await webpush.sendNotification(
-      subscription,
-      JSON.stringify({
-        title: 'Timer Complete',
-        body: `${label} is done!`,
-        tag: `timer-${timerId}`,
-      })
-    )
+    await webpush.sendNotification(subscription, payload)
   } catch (err: any) {
     if (err.statusCode !== 410 && err.statusCode !== 404) {
       console.error(`Push failed for timer ${timerId}:`, err.message)

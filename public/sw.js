@@ -51,22 +51,39 @@ self.addEventListener('fetch', (event) => {
 })
 
 // Push: show notification when push arrives (app backgrounded)
+// Declarative Web Push (web_push: "8030") is handled natively by Safari —
+// this handler is the fallback for browsers that don't support it yet.
 self.addEventListener('push', (event) => {
-  let data = { title: 'Timer Complete', body: 'Your timer is done!' }
+  let title = 'Timer Complete'
+  let body = 'Your timer is done!'
+  let tag = 'timer-alert'
+  let url = '/'
+
   try {
-    data = event.data.json()
+    const raw = event.data.json()
+    if (raw.web_push === '8030' && raw.notification) {
+      // Declarative format reached the SW (non-Safari browser)
+      title = raw.notification.title || title
+      body = raw.notification.body || body
+      tag = raw.notification.tag || tag
+      url = raw.notification.navigate_url || url
+    } else {
+      title = raw.title || title
+      body = raw.body || body
+      tag = raw.tag || tag
+    }
   } catch {
     // fallback to defaults
   }
 
   event.waitUntil(
-    self.registration.showNotification(data.title, {
-      body: data.body,
+    self.registration.showNotification(title, {
+      body,
       icon: '/icon-192x192.png',
       badge: '/icon-72x72.png',
-      tag: data.tag || 'timer-alert',
+      tag,
       vibrate: [200, 100, 200, 100, 200],
-      data: { url: '/' },
+      data: { url },
       requireInteraction: true,
     })
   )
