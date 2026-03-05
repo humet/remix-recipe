@@ -59,7 +59,9 @@ Paste or photograph a recipe, pick from AI-suggested improvements, then interact
    NEXT_PUBLIC_VAPID_PUBLIC_KEY=your-vapid-public-key
    VAPID_PRIVATE_KEY=your-vapid-private-key
    VAPID_SUBJECT=mailto:your-email@example.com
-   CRON_SECRET=your-cron-secret
+   QSTASH_TOKEN=your-qstash-token
+   QSTASH_CURRENT_SIGNING_KEY=your-qstash-signing-key
+   QSTASH_NEXT_SIGNING_KEY=your-qstash-next-signing-key
    ```
 
    AI model requests (`google/gemini-3-flash`) are routed through the Vercel AI Gateway.

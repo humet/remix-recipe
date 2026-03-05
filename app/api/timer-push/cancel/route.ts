@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server'
+import { Client } from '@upstash/qstash'
 import { createClient } from '@/lib/supabase/server'
+
+const qstash = new Client({ token: process.env.QSTASH_TOKEN! })
 
 export async function POST(request: Request) {
   try {
@@ -11,15 +14,23 @@ export async function POST(request: Request) {
 
     const supabase = await createClient()
 
-    const { error } = await supabase
+    // Look up QStash message ID
+    const { data } = await supabase
       .from('push_timers')
-      .delete()
+      .select('qstash_message_id')
       .eq('timer_id', timerId)
+      .single()
 
-    if (error) {
-      console.error('Error canceling push timer:', error)
-      return NextResponse.json({ error: 'Failed to cancel' }, { status: 500 })
+    if (data?.qstash_message_id) {
+      try {
+        await qstash.messages.delete(data.qstash_message_id)
+      } catch {
+        // Message may have already been delivered or expired
+      }
     }
+
+    // Delete the row
+    await supabase.from('push_timers').delete().eq('timer_id', timerId)
 
     return NextResponse.json({ ok: true })
   } catch (err) {

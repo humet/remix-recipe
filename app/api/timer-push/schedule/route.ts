@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server'
+import { Client } from '@upstash/qstash'
 import { createClient } from '@/lib/supabase/server'
+
+const qstash = new Client({ token: process.env.QSTASH_TOKEN! })
 
 export async function POST(request: Request) {
   try {
@@ -9,23 +12,34 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    const supabase = await createClient()
+    // Calculate delay in seconds
+    const delaySeconds = Math.max(0, Math.round((new Date(fireAt).getTime() - Date.now()) / 1000))
 
-    const { error } = await supabase.from('push_timers').upsert(
+    // Get the app's base URL for the QStash callback
+    const baseUrl = process.env.NEXT_PUBLIC_VERCEL_URL
+      ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`
+      : process.env.VERCEL_URL
+        ? `https://${process.env.VERCEL_URL}`
+        : 'http://localhost:3000'
+
+    // Schedule QStash message to call /api/timer-push/send at fire_at
+    const { messageId } = await qstash.publishJSON({
+      url: `${baseUrl}/api/timer-push/send`,
+      body: { timerId, label, subscription },
+      delay: delaySeconds,
+    })
+
+    // Store timer_id → qstash_message_id mapping for cancellation
+    const supabase = await createClient()
+    await supabase.from('push_timers').upsert(
       {
         timer_id: timerId,
-        endpoint: subscription.endpoint,
-        subscription,
+        qstash_message_id: messageId,
         label,
         fire_at: fireAt,
       },
       { onConflict: 'timer_id' }
     )
-
-    if (error) {
-      console.error('Error scheduling push timer:', error)
-      return NextResponse.json({ error: 'Failed to schedule' }, { status: 500 })
-    }
 
     return NextResponse.json({ ok: true })
   } catch (err) {
