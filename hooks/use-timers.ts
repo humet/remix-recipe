@@ -64,19 +64,11 @@ export function useTimers(pushSubscription?: PushSubscription | null) {
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
   const audioContextRef = useRef<AudioContext | null>(null)
   const wakeLockRef = useRef<WakeLockSentinel | null>(null)
+  const playAlertRef = useRef<(label: string) => void>(() => {})
 
-  // Cleanup interval on unmount
-  useEffect(() => {
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current)
-      }
-    }
-  }, [])
-
-  // Request wake lock when timers are running
   const hasRunningTimers = timers.some(t => t.isRunning && !t.isComplete)
 
+  // Wake lock management
   useEffect(() => {
     const requestWakeLock = async () => {
       if (!('wakeLock' in navigator)) return
@@ -98,7 +90,6 @@ export function useTimers(pushSubscription?: PushSubscription | null) {
 
     requestWakeLock()
 
-    // Re-acquire wake lock when page becomes visible again (e.g. after phone unlock)
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible' && hasRunningTimers && !wakeLockRef.current) {
         requestWakeLock()
@@ -115,52 +106,65 @@ export function useTimers(pushSubscription?: PushSubscription | null) {
     }
   }, [hasRunningTimers])
 
-  // Sync timers from wall clock
-  const syncTimers = useCallback(() => {
-    setTimers(prev => prev.map(timer => {
-      if (!timer.isRunning || timer.isComplete) return timer
+  // Wall-clock tick function — self-contained, no stale closures
+  const tick = useCallback(() => {
+    setTimers(prev => {
+      let changed = false
+      const next = prev.map(timer => {
+        if (!timer.isRunning || timer.isComplete) return timer
 
-      const newRemaining = Math.round((timer.endsAt - Date.now()) / 1000)
+        const newRemaining = Math.round((timer.endsAt - Date.now()) / 1000)
 
-      if (newRemaining <= 0) {
-        playAlert(timer.label)
-        cancelPush(timer.id)
-        return { ...timer, remainingSeconds: 0, isComplete: true, isRunning: false }
-      }
+        if (newRemaining <= 0) {
+          changed = true
+          playAlertRef.current(timer.label)
+          cancelPush(timer.id)
+          return { ...timer, remainingSeconds: 0, isComplete: true, isRunning: false }
+        }
 
-      return { ...timer, remainingSeconds: newRemaining }
-    }))
-  }, [playAlert])
+        if (newRemaining !== timer.remainingSeconds) {
+          changed = true
+          return { ...timer, remainingSeconds: newRemaining }
+        }
 
-  // Main timer tick — uses wall clock so it catches up after suspend
+        return timer
+      })
+      // Return same reference if nothing changed — prevents unnecessary re-renders
+      return changed ? next : prev
+    })
+  }, [])
+
+  // Start/stop interval only when running state changes (not every tick)
   useEffect(() => {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current)
-    }
-
-    const hasRunningTimers = timers.some(t => t.isRunning && !t.isComplete)
-
     if (hasRunningTimers) {
-      intervalRef.current = setInterval(syncTimers, 1000)
+      // Tick immediately to sync, then every second
+      tick()
+      intervalRef.current = setInterval(tick, 1000)
+    } else {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+        intervalRef.current = null
+      }
     }
 
     return () => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current)
+        intervalRef.current = null
       }
     }
-  }, [timers, syncTimers])
+  }, [hasRunningTimers, tick])
 
   // Re-sync immediately when app comes back to foreground
   useEffect(() => {
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') {
-        syncTimers()
+        tick()
       }
     }
     document.addEventListener('visibilitychange', handleVisibility)
     return () => document.removeEventListener('visibilitychange', handleVisibility)
-  }, [syncTimers])
+  }, [tick])
 
   const playAlert = useCallback((label: string) => {
     // Play sound using Web Audio API
@@ -187,6 +191,7 @@ export function useTimers(pushSubscription?: PushSubscription | null) {
       })
     }
   }, [])
+  playAlertRef.current = playAlert
 
   const parseTimeString = (timeStr: string): number => {
     // Parse various time formats: "5 minutes", "5-7 minutes", "1 hour", "30 seconds", "1h 30m"
