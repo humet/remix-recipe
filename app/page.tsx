@@ -57,6 +57,7 @@ export default function Home() {
       const data = await response.json()
       setAnalysis(data.analysis)
       setAppState('suggestions')
+      window.scrollTo(0, 0)
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Something went wrong'
       setError(errorMessage)
@@ -100,6 +101,7 @@ export default function Home() {
       const data = await response.json()
       setRecipe(data.recipe)
       setAppState('result')
+      window.scrollTo(0, 0)
     } catch (err) {
       setError('Something went wrong. Please try again.')
       console.error('Error:', err)
@@ -115,6 +117,7 @@ export default function Home() {
 
   const handleBackToInput = () => {
     setAppState('input')
+    window.scrollTo(0, 0)
     setAnalysis(null)
     setRecipe(null)
     setError(null)
@@ -137,6 +140,7 @@ export default function Home() {
     setOriginalInput(origInput)
     setAnalysis(origAnalysis || null)
     setAppState('result')
+    window.scrollTo(0, 0)
   }
 
   const handleRecipeSaved = (id: string) => {
@@ -148,6 +152,7 @@ export default function Home() {
       setRecipe(previousRecipe)
       setAppState('result')
       setPreviousRecipe(null)
+      window.scrollTo(0, 0)
     }
   }
 
@@ -158,6 +163,7 @@ export default function Home() {
       setIsReimproved(true)
       setImproveFromRecipe(null)
       setAppState('suggestions')
+      window.scrollTo(0, 0)
     }
   }
 
@@ -188,6 +194,7 @@ export default function Home() {
       setRecipe(null)
       setIsReimproved(true)
       setAppState('suggestions')
+      window.scrollTo(0, 0)
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Something went wrong'
       setError(errorMessage)
