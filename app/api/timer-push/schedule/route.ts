@@ -15,12 +15,10 @@ export async function POST(request: Request) {
     // Calculate delay in seconds
     const delaySeconds = Math.max(0, Math.round((new Date(fireAt).getTime() - Date.now()) / 1000))
 
-    // Get the app's base URL for the QStash callback
-    const baseUrl = process.env.NEXT_PUBLIC_VERCEL_URL
-      ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`
-      : process.env.VERCEL_URL
-        ? `https://${process.env.VERCEL_URL}`
-        : 'http://localhost:3000'
+    // Use production URL to avoid Vercel deployment protection on preview URLs
+    const baseUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL
+      ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+      : 'http://localhost:3000'
 
     // Schedule QStash message to call /api/timer-push/send at fire_at
     const { messageId } = await qstash.publishJSON({
