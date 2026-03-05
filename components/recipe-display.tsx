@@ -394,9 +394,10 @@ export function RecipeDisplay({ recipe: initialRecipe, onHome, savedRecipeId, on
                     return (
                       <button
                         key={idx}
-                        onClick={() => {
-                          if (pushSupported && !pushSubscription) subscribePush()
-                          timerHook.addTimer(timing.label, timing.duration)
+                        onClick={async () => {
+                          let sub = pushSubscription
+                          if (pushSupported && !sub) sub = await subscribePush()
+                          timerHook.addTimer(timing.label, timing.duration, sub)
                           if (!timerHintSeen) dismissTimerHint()
                         }}
                         className={`flex items-center gap-1.5 px-3 py-2 glass rounded-xl ring-1 ring-primary/20 hover:ring-2 hover:ring-primary/30 transition-all active:scale-95 ${isFirstTimer ? 'ring-2 ring-primary/30' : ''}`}
@@ -410,9 +411,10 @@ export function RecipeDisplay({ recipe: initialRecipe, onHome, savedRecipeId, on
                 </div>
               ) : step.timing ? (
                 <button
-                  onClick={() => {
-                    if (pushSupported && !pushSubscription) subscribePush()
-                    timerHook.addTimer(`Step ${step.stepNumber}`, step.timing!)
+                  onClick={async () => {
+                    let sub = pushSubscription
+                    if (pushSupported && !sub) sub = await subscribePush()
+                    timerHook.addTimer(`Step ${step.stepNumber}`, step.timing!, sub)
                     if (!timerHintSeen) dismissTimerHint()
                   }}
                   className={`flex items-center gap-1.5 px-3 py-2 glass rounded-xl ring-1 ring-primary/20 hover:ring-2 hover:ring-primary/30 transition-all active:scale-95 ${currentStep === 0 && !timerHintSeen ? 'ring-2 ring-primary/30' : ''}`}

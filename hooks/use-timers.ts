@@ -204,7 +204,7 @@ export function useTimers(pushSubscription?: PushSubscription | null) {
     return totalSeconds
   }
 
-  const addTimer = useCallback((label: string, timeString: string) => {
+  const addTimer = useCallback((label: string, timeString: string, subscriptionOverride?: PushSubscription | null) => {
     const seconds = parseTimeString(timeString)
     if (seconds <= 0) return null
 
@@ -225,8 +225,9 @@ export function useTimers(pushSubscription?: PushSubscription | null) {
 
     setTimers(prev => [...prev, newTimer])
 
-    // Schedule push notification
-    schedulePush(id, label, seconds, pushSubscription ?? null)
+    // Schedule push notification — prefer override (from fresh subscribe) over stale closure value
+    const sub = subscriptionOverride ?? pushSubscription ?? null
+    schedulePush(id, label, seconds, sub)
 
     return id
   }, [pushSubscription])
