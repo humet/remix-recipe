@@ -56,11 +56,14 @@ export function SavedRecipes({ onSelect, onTagsChanged }: SavedRecipesProps) {
 
   const fetchRecipes = async () => {
     const supabase = createClient()
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('saved_recipes')
       .select('*')
       .order('created_at', { ascending: false })
-    
+
+    if (error) {
+      console.error('Error fetching saved recipes:', error)
+    }
     if (data) {
       setRecipes(data)
     }

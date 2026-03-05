@@ -160,9 +160,9 @@ export function RecipeDisplay({ recipe: initialRecipe, onHome, savedRecipeId, on
     try {
       if (currentSavedId && !saveAsNew) {
         // Update existing
-        await supabase
+        const { error } = await supabase
           .from('saved_recipes')
-          .update({ 
+          .update({
             title: recipe.title,
             recipe_data: recipe,
             original_input: originalInput,
@@ -170,11 +170,12 @@ export function RecipeDisplay({ recipe: initialRecipe, onHome, savedRecipeId, on
             updated_at: new Date().toISOString()
           })
           .eq('id', currentSavedId)
+        if (error) throw error
       } else {
         // Insert new
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from('saved_recipes')
-          .insert({ 
+          .insert({
             title: recipe.title,
             recipe_data: recipe,
             original_input: originalInput,
@@ -182,7 +183,8 @@ export function RecipeDisplay({ recipe: initialRecipe, onHome, savedRecipeId, on
           })
           .select('id')
           .single()
-        
+        if (error) throw error
+
         if (data) {
           setCurrentSavedId(data.id)
           onSaved?.(data.id)
