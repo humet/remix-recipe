@@ -30,14 +30,16 @@ const improvedRecipeSchema = z.object({
   ).describe('Step-by-step instructions with inline measurements'),
   proTips: z.array(z.string()).describe('2-3 professional tips to elevate the dish'),
   improvements: z.array(z.string()).describe('ONLY list actual recipe changes like ingredient swaps, taste adjustments, health modifications, or technique changes. Do NOT include formatting or structural changes. Leave empty array if no actual recipe changes were made.'),
+  tags: z.array(z.string()).describe('3-6 short descriptive tags that genuinely describe this recipe. Use whatever tags fit — these are just examples of the kinds of things to consider: cuisine origin, meal type, dietary properties, cooking method, key ingredients, occasion, flavor profile, difficulty. Do not limit yourself to these examples; use tags that are actually relevant to this specific recipe. Title-cased, 1-3 words each.'),
 })
 
 export async function POST(req: Request) {
   try {
-    const { parsedRecipe, selectedImprovements, customRequest } = await req.json() as { 
+    const { parsedRecipe, selectedImprovements, customRequest, existingTags } = await req.json() as {
       parsedRecipe: string
       selectedImprovements: { title: string; description: string }[]
       customRequest?: string
+      existingTags?: string[]
     }
 
     const hasImprovements = selectedImprovements.length > 0 || customRequest
@@ -57,6 +59,7 @@ CRITICAL REQUIREMENTS:
 2. Never assume the user knows amounts - always be explicit with measurements in the instructions.
 3. Make instructions clear and beginner-friendly.
 4. Add helpful tips where appropriate.
+5. Generate 3-6 short, descriptive tags that naturally categorize this recipe (e.g. cuisine, meal type, dietary info, cooking method, flavor profile). Title-case each tag, keep them 1-3 words.${existingTags && existingTags.length > 0 ? `\n   IMPORTANT: The user already has these tags on other recipes: ${existingTags.join(', ')}. Reuse any that genuinely fit this recipe before inventing new ones. Only create new tags when none of the existing ones apply.` : ''}
 ${hasImprovements ? improvementInstructions : ''}
 
 ${hasImprovements ? `\nIn the "improvements" field, list ONLY the specific recipe changes you made (ingredient swaps, taste adjustments, health modifications, technique changes). Do NOT list formatting or structural changes.` : `\nThe user did not request any recipe changes. Return an EMPTY array for the "improvements" field since no actual recipe modifications were made.`}
@@ -71,6 +74,19 @@ ${parsedRecipe}`
       }),
       prompt,
     })
+
+    // Normalize tags: trim, dedupe, remove empties
+    if (output && output.tags) {
+      const seen = new Set<string>()
+      output.tags = output.tags
+        .map(t => t.trim())
+        .filter(t => {
+          if (!t || seen.has(t.toLowerCase())) return false
+          seen.add(t.toLowerCase())
+          return true
+        })
+        .slice(0, 6)
+    }
 
     return Response.json({ recipe: output })
   } catch (error) {

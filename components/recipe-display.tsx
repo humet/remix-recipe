@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { ImprovedRecipe, Ingredient, RecipeAnalysis } from '@/lib/recipe-types'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { ProcessingOverlay } from '@/components/processing-overlay'
 import { IngredientSwapSheet } from '@/components/ingredient-swap-sheet'
 import { RecipeQASheet } from '@/components/recipe-qa-sheet'
@@ -539,6 +540,15 @@ export function RecipeDisplay({ recipe: initialRecipe, onHome, savedRecipeId, on
           <div className="flex flex-col gap-3">
             <h2 className="text-2xl font-semibold text-foreground text-balance">{recipe.title}</h2>
             <p className="text-muted-foreground leading-relaxed">{recipe.description}</p>
+            {(recipe.tags ?? []).length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {(recipe.tags ?? []).map(tag => (
+                  <Badge key={tag} variant="secondary" className="text-xs">
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* AI Improvements Summary */}

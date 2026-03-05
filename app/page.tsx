@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { RecipeInput } from '@/components/recipe-input'
 import { RecipeDisplay } from '@/components/recipe-display'
 import { ImprovementSuggestions } from '@/components/improvement-suggestions'
@@ -23,6 +23,10 @@ export default function Home() {
   const [isReimproved, setIsReimproved] = useState(false)
   const [improveFromRecipe, setImproveFromRecipe] = useState<string | null>(null)
   const [previousRecipe, setPreviousRecipe] = useState<ImprovedRecipe | null>(null)
+  const existingTagsRef = useRef<string[]>([])
+  const handleTagsChanged = useCallback((tags: string[]) => {
+    existingTagsRef.current = tags
+  }, [])
 
   // Step 1: Analyze the recipe and get suggestions
   const handleAnalyzeRecipe = async (
@@ -85,6 +89,7 @@ export default function Home() {
             description: imp.description,
           })),
           customRequest,
+          existingTags: existingTagsRef.current,
         }),
       })
 
@@ -245,7 +250,7 @@ export default function Home() {
       
       {/* Saved Recipes */}
       <div className="px-5 pb-6">
-        <SavedRecipes key={refreshKey} onSelect={handleSelectSavedRecipe} />
+        <SavedRecipes key={refreshKey} onSelect={handleSelectSavedRecipe} onTagsChanged={handleTagsChanged} />
       </div>
 
       {/* Example recipes hint */}

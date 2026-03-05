@@ -28,6 +28,7 @@ export interface ImprovedRecipe {
   steps: RecipeStep[]
   proTips: string[]
   improvements: string[]
+  tags?: string[]
 }
 
 export interface SuggestedImprovement {
