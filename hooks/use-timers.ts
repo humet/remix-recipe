@@ -7,6 +7,8 @@ export interface Timer {
   label: string
   totalSeconds: number
   remainingSeconds: number
+  endsAt: number // wall-clock timestamp (ms) when timer should complete
+  pausedRemaining?: number // seconds left when paused (to resume from)
   isRunning: boolean
   isComplete: boolean
 }
@@ -113,7 +115,24 @@ export function useTimers(pushSubscription?: PushSubscription | null) {
     }
   }, [hasRunningTimers])
 
-  // Main timer tick
+  // Sync timers from wall clock
+  const syncTimers = useCallback(() => {
+    setTimers(prev => prev.map(timer => {
+      if (!timer.isRunning || timer.isComplete) return timer
+
+      const newRemaining = Math.round((timer.endsAt - Date.now()) / 1000)
+
+      if (newRemaining <= 0) {
+        playAlert(timer.label)
+        cancelPush(timer.id)
+        return { ...timer, remainingSeconds: 0, isComplete: true, isRunning: false }
+      }
+
+      return { ...timer, remainingSeconds: newRemaining }
+    }))
+  }, [playAlert])
+
+  // Main timer tick — uses wall clock so it catches up after suspend
   useEffect(() => {
     if (intervalRef.current) {
       clearInterval(intervalRef.current)
@@ -122,23 +141,7 @@ export function useTimers(pushSubscription?: PushSubscription | null) {
     const hasRunningTimers = timers.some(t => t.isRunning && !t.isComplete)
 
     if (hasRunningTimers) {
-      intervalRef.current = setInterval(() => {
-        setTimers(prev => prev.map(timer => {
-          if (!timer.isRunning || timer.isComplete) return timer
-
-          const newRemaining = timer.remainingSeconds - 1
-
-          if (newRemaining <= 0) {
-            // Timer complete - play sound and notify
-            playAlert(timer.label)
-            // Cancel push to avoid duplicate notification
-            cancelPush(timer.id)
-            return { ...timer, remainingSeconds: 0, isComplete: true, isRunning: false }
-          }
-
-          return { ...timer, remainingSeconds: newRemaining }
-        }))
-      }, 1000)
+      intervalRef.current = setInterval(syncTimers, 1000)
     }
 
     return () => {
@@ -146,7 +149,18 @@ export function useTimers(pushSubscription?: PushSubscription | null) {
         clearInterval(intervalRef.current)
       }
     }
-  }, [timers])
+  }, [timers, syncTimers])
+
+  // Re-sync immediately when app comes back to foreground
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        syncTimers()
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibility)
+    return () => document.removeEventListener('visibilitychange', handleVisibility)
+  }, [syncTimers])
 
   const playAlert = useCallback((label: string) => {
     // Play sound using Web Audio API
@@ -219,6 +233,7 @@ export function useTimers(pushSubscription?: PushSubscription | null) {
       label,
       totalSeconds: seconds,
       remainingSeconds: seconds,
+      endsAt: Date.now() + seconds * 1000,
       isRunning: true,
       isComplete: false,
     }
@@ -233,19 +248,21 @@ export function useTimers(pushSubscription?: PushSubscription | null) {
   }, [pushSubscription])
 
   const pauseTimer = useCallback((id: string) => {
-    setTimers(prev => prev.map(t =>
-      t.id === id ? { ...t, isRunning: false } : t
-    ))
-    // Cancel push while paused
+    setTimers(prev => prev.map(t => {
+      if (t.id !== id) return t
+      const remaining = Math.max(0, Math.round((t.endsAt - Date.now()) / 1000))
+      return { ...t, isRunning: false, remainingSeconds: remaining, pausedRemaining: remaining }
+    }))
     cancelPush(id)
   }, [])
 
   const resumeTimer = useCallback((id: string) => {
     setTimers(prev => {
-      const updated = prev.map(t =>
-        t.id === id && !t.isComplete ? { ...t, isRunning: true } : t
-      )
-      // Reschedule push with remaining time
+      const updated = prev.map(t => {
+        if (t.id !== id || t.isComplete) return t
+        const remaining = t.pausedRemaining ?? t.remainingSeconds
+        return { ...t, isRunning: true, endsAt: Date.now() + remaining * 1000, pausedRemaining: undefined }
+      })
       const timer = updated.find(t => t.id === id)
       if (timer && timer.isRunning) {
         schedulePush(id, timer.label, timer.remainingSeconds, pushSubscription ?? null)
@@ -268,9 +285,8 @@ export function useTimers(pushSubscription?: PushSubscription | null) {
   const resetTimer = useCallback((id: string) => {
     setTimers(prev => {
       const updated = prev.map(t =>
-        t.id === id ? { ...t, remainingSeconds: t.totalSeconds, isComplete: false, isRunning: true } : t
+        t.id === id ? { ...t, remainingSeconds: t.totalSeconds, endsAt: Date.now() + t.totalSeconds * 1000, isComplete: false, isRunning: true, pausedRemaining: undefined } : t
       )
-      // Reschedule push with full duration
       const timer = updated.find(t => t.id === id)
       if (timer) {
         schedulePush(id, timer.label, timer.totalSeconds, pushSubscription ?? null)
