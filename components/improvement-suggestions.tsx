@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { RecipeAnalysis, SuggestedImprovement } from '@/lib/recipe-types'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -26,7 +27,8 @@ interface ImprovementSuggestionsProps {
   onApply: (selectedImprovements: SuggestedImprovement[], customRequest: string) => void
   onSkip: () => void
   onBack?: () => void
-  onHome: () => void
+  onHome?: () => void
+  homeHref?: string
   isLoading: boolean
 }
 
@@ -58,8 +60,11 @@ export function ImprovementSuggestions({
   onSkip,
   onBack,
   onHome,
+  homeHref,
   isLoading
 }: ImprovementSuggestionsProps) {
+  const router = useRouter()
+  const handleHome = onHome ?? (homeHref ? () => router.push(homeHref) : () => router.push('/'))
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [customRequest, setCustomRequest] = useState('')
   const [showCustomInput, setShowCustomInput] = useState(false)
@@ -108,7 +113,7 @@ export function ImprovementSuggestions({
             </p>
           </div>
           <button
-            onClick={onHome}
+            onClick={handleHome}
             className="h-11 w-11 flex items-center justify-center rounded-full glass text-muted-foreground hover:text-foreground hover:scale-105 active:scale-95 transition-all"
             aria-label="Go home"
           >

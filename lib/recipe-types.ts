@@ -22,6 +22,7 @@ export interface ImprovedRecipe {
   description: string
   prepTime: string
   cookTime: string
+  totalTime?: string
   servings: string
   difficulty: 'Easy' | 'Medium' | 'Hard'
   ingredients: Ingredient[]

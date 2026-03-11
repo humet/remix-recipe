@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { ImprovedRecipe, RecipeAnalysis } from '@/lib/recipe-types'
 import { Clock, Users, ChefHat, Trash2, Loader2, X } from 'lucide-react'
@@ -16,11 +17,10 @@ interface SavedRecipe {
 }
 
 interface SavedRecipesProps {
-  onSelect: (recipe: ImprovedRecipe, savedId: string, originalInput?: string, originalAnalysis?: RecipeAnalysis) => void
   onTagsChanged?: (tags: string[]) => void
 }
 
-export function SavedRecipes({ onSelect, onTagsChanged }: SavedRecipesProps) {
+export function SavedRecipes({ onTagsChanged }: SavedRecipesProps) {
   const [recipes, setRecipes] = useState<SavedRecipe[]>([])
   const [loading, setLoading] = useState(true)
   const [deletingId, setDeletingId] = useState<string | null>(null)
@@ -75,6 +75,7 @@ export function SavedRecipes({ onSelect, onTagsChanged }: SavedRecipesProps) {
   }, [])
 
   const handleDelete = async (e: React.MouseEvent, id: string) => {
+    e.preventDefault()
     e.stopPropagation()
     setDeletingId(id)
     
@@ -135,13 +136,10 @@ export function SavedRecipes({ onSelect, onTagsChanged }: SavedRecipesProps) {
         {filteredRecipes.map((saved) => {
           const recipe = saved.recipe_data
           return (
-            <div
+            <Link
               key={saved.id}
-              role="button"
-              tabIndex={0}
-              onClick={() => onSelect(recipe, saved.id, saved.original_input, saved.original_analysis)}
-              onKeyDown={(e) => e.key === 'Enter' && onSelect(recipe, saved.id, saved.original_input, saved.original_analysis)}
-              className="w-full text-left glass rounded-2xl p-4 hover:ring-2 hover:ring-primary/30 transition-all active:scale-[0.98] cursor-pointer"
+              href={`/recipe/${saved.id}`}
+              className="block w-full text-left glass rounded-2xl p-4 hover:ring-2 hover:ring-primary/30 transition-all active:scale-[0.98] cursor-pointer"
             >
               <div className="flex justify-between items-start gap-3">
                 <div className="flex-1 min-w-0">
@@ -197,7 +195,7 @@ export function SavedRecipes({ onSelect, onTagsChanged }: SavedRecipesProps) {
                 </div>
                 <span className="ml-auto">{formatDate(saved.created_at)}</span>
               </div>
-            </div>
+            </Link>
           )
         })}
       </div>

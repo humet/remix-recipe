@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { ImprovedRecipe, Ingredient, RecipeAnalysis } from '@/lib/recipe-types'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -39,17 +40,23 @@ import {
 
 interface RecipeDisplayProps {
   recipe: ImprovedRecipe
-  onHome: () => void
+  onHome?: () => void
+  homeHref?: string
   savedRecipeId?: string
   onSaved?: (id: string) => void
   originalInput?: string
   originalAnalysis?: RecipeAnalysis | null
-  onImproveFurther: () => void
+  onImproveFurther?: () => void
+  improveFurtherHref?: string
   onReimproveFromOriginal?: () => void
   isReimproved?: boolean
 }
 
-export function RecipeDisplay({ recipe: initialRecipe, onHome, savedRecipeId, onSaved, originalInput, originalAnalysis, onImproveFurther, onReimproveFromOriginal, isReimproved }: RecipeDisplayProps) {
+export function RecipeDisplay({ recipe: initialRecipe, onHome, homeHref, savedRecipeId, onSaved, originalInput, originalAnalysis, onImproveFurther, improveFurtherHref, onReimproveFromOriginal, isReimproved }: RecipeDisplayProps) {
+  const router = useRouter()
+  const handleHome = onHome ?? (homeHref ? () => router.push(homeHref) : () => router.push('/'))
+  const handleImproveFurther = onImproveFurther ?? (improveFurtherHref ? () => router.push(improveFurtherHref) : () => router.push('/'))
+
   const [recipe, setRecipe] = useState(initialRecipe)
   const [currentStep, setCurrentStep] = useState(0)
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set())
@@ -510,7 +517,7 @@ export function RecipeDisplay({ recipe: initialRecipe, onHome, savedRecipeId, on
         <div className="flex items-center gap-3">
           <h1 className="flex-1 text-lg font-semibold text-foreground truncate">{recipe.title}</h1>
           <button
-            onClick={onHome}
+            onClick={handleHome}
             className="flex h-10 w-10 items-center justify-center rounded-full glass text-muted-foreground hover:text-foreground hover:scale-105 active:scale-95 transition-all"
             aria-label="Go home"
           >
@@ -574,7 +581,7 @@ export function RecipeDisplay({ recipe: initialRecipe, onHome, savedRecipeId, on
           {/* Improve further options */}
           <div className="flex flex-col gap-2">
             <button
-              onClick={onImproveFurther}
+              onClick={handleImproveFurther}
               className="flex items-center justify-center gap-2 p-4 glass rounded-2xl bg-primary/5 text-foreground hover:ring-2 hover:ring-primary/30 transition-all"
             >
               <Sparkles className="h-5 w-5 text-primary" />

@@ -1,12 +1,14 @@
 'use client'
 
 import { useCallback, useRef, useState } from 'react'
+import Link from 'next/link'
 import { RecipeInput } from '@/components/recipe-input'
 import { RecipeDisplay } from '@/components/recipe-display'
 import { ImprovementSuggestions } from '@/components/improvement-suggestions'
 import { ProcessingOverlay } from '@/components/processing-overlay'
 import { SavedRecipes } from '@/components/saved-recipes'
 import { ImprovedRecipe, RecipeAnalysis, SuggestedImprovement, serializeRecipe } from '@/lib/recipe-types'
+import { CalendarDays } from 'lucide-react'
 
 type AppState = 'input' | 'suggestions' | 'result'
 type ProcessingType = 'analyzing' | 'improving' | null
@@ -27,7 +29,6 @@ export default function Home() {
   const handleTagsChanged = useCallback((tags: string[]) => {
     existingTagsRef.current = tags
   }, [])
-
   // Step 1: Analyze the recipe and get suggestions
   const handleAnalyzeRecipe = async (
     text: string,
@@ -127,20 +128,6 @@ export default function Home() {
     setImproveFromRecipe(null)
     setPreviousRecipe(null)
     setRefreshKey(prev => prev + 1)
-  }
-
-  const handleSelectSavedRecipe = (
-    recipe: ImprovedRecipe,
-    savedId: string,
-    origInput?: string,
-    origAnalysis?: RecipeAnalysis
-  ) => {
-    setRecipe(recipe)
-    setSavedRecipeId(savedId)
-    setOriginalInput(origInput)
-    setAnalysis(origAnalysis || null)
-    setAppState('result')
-    window.scrollTo(0, 0)
   }
 
   const handleRecipeSaved = (id: string) => {
@@ -254,10 +241,26 @@ export default function Home() {
           </div>
         </div>
       )}
+
+      {/* Plan your week */}
+      <div className="px-5 pb-6">
+        <Link
+          href="/meal-plan"
+          className="w-full glass rounded-2xl p-4 hover:ring-2 hover:ring-primary/30 transition-all active:scale-[0.98] cursor-pointer flex items-center gap-3"
+        >
+          <div className="h-10 w-10 flex items-center justify-center rounded-xl bg-primary/10">
+            <CalendarDays className="h-5 w-5 text-primary" />
+          </div>
+          <div className="text-left">
+            <h3 className="font-semibold text-foreground text-sm">Plan your week</h3>
+            <p className="text-xs text-muted-foreground">Assign saved recipes to each day</p>
+          </div>
+        </Link>
+      </div>
       
       {/* Saved Recipes */}
       <div className="px-5 pb-6">
-        <SavedRecipes key={refreshKey} onSelect={handleSelectSavedRecipe} onTagsChanged={handleTagsChanged} />
+        <SavedRecipes key={refreshKey} onTagsChanged={handleTagsChanged} />
       </div>
 
       {/* Example recipes hint */}
