@@ -45,5 +45,14 @@
       "type": "image/png",
       "purpose": "maskable"
     }
+  ],
+  "shortcuts": [
+    {
+      "name": "Today's Dinner",
+      "short_name": "Dinner",
+      "description": "Jump to tonight's planned dinner",
+      "url": "/todays-dinner",
+      "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192" }]
+    }
   ]
 }

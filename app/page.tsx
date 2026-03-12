@@ -9,6 +9,7 @@ import { ProcessingOverlay } from '@/components/processing-overlay'
 import { SavedRecipes } from '@/components/saved-recipes'
 import { ImprovedRecipe, RecipeAnalysis, SuggestedImprovement, serializeRecipe } from '@/lib/recipe-types'
 import { CalendarDays } from 'lucide-react'
+import { TonightsDinner } from '@/components/tonights-dinner'
 
 type AppState = 'input' | 'suggestions' | 'result'
 type ProcessingType = 'analyzing' | 'improving' | null
@@ -239,6 +240,8 @@ export default function Home() {
           </div>
         </div>
       )}
+
+      <TonightsDinner />
 
       {/* Plan your week */}
       <div className="px-5 pb-6">
