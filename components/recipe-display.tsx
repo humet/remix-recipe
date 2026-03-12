@@ -12,6 +12,7 @@ import { TimerBar } from '@/components/timer-bar'
 import { useTimers } from '@/hooks/use-timers'
 import { usePush } from '@/components/providers'
 import { createClient } from '@/lib/supabase/client'
+import { emitDataChange } from '@/lib/events'
 import { 
   ArrowLeft, 
   Clock, 
@@ -198,6 +199,7 @@ export function RecipeDisplay({ recipe: initialRecipe, onHome, homeHref, savedRe
         }
       }
       setIsSaved(true)
+      emitDataChange('recipes-changed')
     } catch (error) {
       console.error('Error saving recipe:', error)
     } finally {

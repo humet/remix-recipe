@@ -20,7 +20,6 @@ export default function Home() {
   const [processingType, setProcessingType] = useState<ProcessingType>(null)
   const [error, setError] = useState<string | null>(null)
   const [savedRecipeId, setSavedRecipeId] = useState<string | undefined>(undefined)
-  const [refreshKey, setRefreshKey] = useState(0)
   const [originalInput, setOriginalInput] = useState<string | undefined>(undefined)
   const [isReimproved, setIsReimproved] = useState(false)
   const [improveFromRecipe, setImproveFromRecipe] = useState<string | null>(null)
@@ -127,7 +126,6 @@ export default function Home() {
     setIsReimproved(false)
     setImproveFromRecipe(null)
     setPreviousRecipe(null)
-    setRefreshKey(prev => prev + 1)
   }
 
   const handleRecipeSaved = (id: string) => {
@@ -260,7 +258,7 @@ export default function Home() {
       
       {/* Saved Recipes */}
       <div className="px-5 pb-6">
-        <SavedRecipes key={refreshKey} onTagsChanged={handleTagsChanged} />
+        <SavedRecipes onTagsChanged={handleTagsChanged} />
       </div>
 
       {/* Example recipes hint */}

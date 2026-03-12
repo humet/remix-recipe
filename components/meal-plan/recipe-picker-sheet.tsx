@@ -6,6 +6,7 @@ import { ImprovedRecipe } from '@/lib/recipe-types'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
 import { Badge } from '@/components/ui/badge'
 import { Clock, Users, ChefHat, Loader2, X } from 'lucide-react'
+import { useDataChangeListener } from '@/lib/events'
 
 interface SavedRecipe {
   id: string
@@ -49,27 +50,28 @@ export function RecipePickerSheet({ isOpen, onClose, onSelect }: RecipePickerShe
     )
   }
 
+  const fetchRecipes = async () => {
+    setLoading(true)
+    const supabase = createClient()
+    const { data, error } = await supabase
+      .from('saved_recipes')
+      .select('id, title, recipe_data, created_at')
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      console.error('Error fetching recipes:', error)
+    }
+    setRecipes(data ?? [])
+    setLoading(false)
+  }
+
   useEffect(() => {
     if (!isOpen) return
-
-    const fetchRecipes = async () => {
-      setLoading(true)
-      const supabase = createClient()
-      const { data, error } = await supabase
-        .from('saved_recipes')
-        .select('id, title, recipe_data, created_at')
-        .order('created_at', { ascending: false })
-
-      if (error) {
-        console.error('Error fetching recipes:', error)
-      }
-      setRecipes(data ?? [])
-      setLoading(false)
-    }
-
     fetchRecipes()
     setActiveFilters([])
   }, [isOpen])
+
+  useDataChangeListener('recipes-changed', fetchRecipes)
 
   return (
     <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>

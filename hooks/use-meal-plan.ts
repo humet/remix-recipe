@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { emitDataChange, useDataChangeListener } from '@/lib/events'
 import { ImprovedRecipe } from '@/lib/recipe-types'
 import { formatDateKey } from '@/lib/meal-plan-utils'
 
@@ -98,6 +99,8 @@ export function useMealPlan(weekDates: Date[]) {
         })
       }
     }
+
+    emitDataChange('meal-plan-changed')
   }
 
   const clearDay = async (date: Date) => {
@@ -121,7 +124,12 @@ export function useMealPlan(weekDates: Date[]) {
       next.delete(dateKey)
       return next
     })
+
+    emitDataChange('meal-plan-changed')
   }
+
+  // Refetch when saved recipes change (e.g. a recipe used in the plan is deleted)
+  useDataChangeListener('recipes-changed', fetchEntries)
 
   return { entries, loading, assignRecipe, clearDay, refetch: fetchEntries }
 }

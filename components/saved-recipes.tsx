@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { ImprovedRecipe, RecipeAnalysis } from '@/lib/recipe-types'
 import { Clock, Users, ChefHat, Trash2, Loader2, X } from 'lucide-react'
+import { emitDataChange, useDataChangeListener } from '@/lib/events'
 import { Badge } from '@/components/ui/badge'
 
 interface SavedRecipe {
@@ -74,6 +75,8 @@ export function SavedRecipes({ onTagsChanged }: SavedRecipesProps) {
     fetchRecipes()
   }, [])
 
+  useDataChangeListener('recipes-changed', fetchRecipes)
+
   const handleDelete = async (e: React.MouseEvent, id: string) => {
     e.preventDefault()
     e.stopPropagation()
@@ -84,6 +87,7 @@ export function SavedRecipes({ onTagsChanged }: SavedRecipesProps) {
     
     setRecipes(prev => prev.filter(r => r.id !== id))
     setDeletingId(null)
+    emitDataChange('recipes-changed')
   }
 
   const formatDate = (dateStr: string) => {

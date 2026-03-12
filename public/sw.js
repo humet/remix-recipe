@@ -1,4 +1,4 @@
-const CACHE_NAME = 'remix-v1'
+const CACHE_NAME = 'remix-v2'
 const APP_SHELL = [
   '/',
   '/manifest.json',
@@ -28,8 +28,8 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url)
 
-  // Network-only for API routes and non-GET
-  if (url.pathname.startsWith('/api') || event.request.method !== 'GET') {
+  // Network-only for API routes, non-GET, and cross-origin (e.g. Supabase)
+  if (url.origin !== self.location.origin || url.pathname.startsWith('/api') || event.request.method !== 'GET') {
     return
   }
 
