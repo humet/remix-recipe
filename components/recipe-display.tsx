@@ -459,6 +459,13 @@ export function RecipeDisplay({ recipe: initialRecipe, onHome, homeHref, savedRe
         {/* Navigation */}
         <footer className={`sticky bottom-0 glass-strong p-4 pb-8 ${timerHook.timers.length > 0 ? 'pb-4' : ''}`}>
           <div className="flex gap-3">
+            <button
+              onClick={() => setView('overview')}
+              className="h-14 w-14 shrink-0 flex items-center justify-center rounded-2xl glass text-muted-foreground hover:text-foreground hover:scale-105 active:scale-95 transition-all"
+              aria-label="Back to overview"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </button>
             <Button
               variant="outline"
               size="lg"
@@ -516,32 +523,7 @@ export function RecipeDisplay({ recipe: initialRecipe, onHome, homeHref, savedRe
       
       {/* Header */}
       <header className="sticky top-0 z-10 glass-strong px-4 py-3">
-        <div className="flex items-center gap-3">
-          <h1 className="flex-1 text-lg font-semibold text-foreground truncate">{recipe.title}</h1>
-          <button
-            onClick={handleHome}
-            className="flex h-10 w-10 items-center justify-center rounded-full glass text-muted-foreground hover:text-foreground hover:scale-105 active:scale-95 transition-all"
-            aria-label="Go home"
-          >
-            <Home className="h-5 w-5" />
-          </button>
-          <button
-            onClick={handleSaveClick}
-            disabled={isSaving}
-            className={`flex h-10 w-10 items-center justify-center rounded-full glass hover:scale-105 active:scale-95 transition-all ${
-              isSaved ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
-            }`}
-            aria-label={isSaved ? 'Recipe saved' : 'Save recipe'}
-          >
-            {isSaving ? (
-              <Loader2 className="h-5 w-5 animate-spin" />
-            ) : isSaved ? (
-              <BookmarkCheck className="h-5 w-5" />
-            ) : (
-              <Bookmark className="h-5 w-5" />
-            )}
-          </button>
-        </div>
+        <h1 className="text-lg font-semibold text-foreground truncate">{recipe.title}</h1>
       </header>
 
       {/* Content */}
@@ -822,16 +804,41 @@ export function RecipeDisplay({ recipe: initialRecipe, onHome, homeHref, savedRe
         </div>
       </main>
 
-      {/* Start Cooking Button */}
+      {/* Bottom Action Toolbar */}
       <div className="fixed bottom-0 left-0 right-0 p-4 pb-8 glass-strong">
-        <Button
-          size="lg"
-          onClick={() => setView('cooking')}
-          className="w-full h-14 rounded-2xl text-base font-semibold bg-gradient-to-r from-primary to-accent shadow-lg shadow-primary/25 hover:scale-[1.02] active:scale-[0.98] transition-transform"
-        >
-          Start Cooking
-          <ChevronRight className="h-5 w-5 ml-1" />
-        </Button>
+        <div className="flex gap-3">
+          <button
+            onClick={handleHome}
+            className="h-14 w-14 shrink-0 flex items-center justify-center rounded-2xl glass text-muted-foreground hover:text-foreground hover:scale-105 active:scale-95 transition-all"
+            aria-label="Go home"
+          >
+            <Home className="h-5 w-5" />
+          </button>
+          <button
+            onClick={handleSaveClick}
+            disabled={isSaving}
+            className={`h-14 w-14 shrink-0 flex items-center justify-center rounded-2xl glass hover:scale-105 active:scale-95 transition-all ${
+              isSaved ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
+            }`}
+            aria-label={isSaved ? 'Recipe saved' : 'Save recipe'}
+          >
+            {isSaving ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : isSaved ? (
+              <BookmarkCheck className="h-5 w-5" />
+            ) : (
+              <Bookmark className="h-5 w-5" />
+            )}
+          </button>
+          <Button
+            size="lg"
+            onClick={() => setView('cooking')}
+            className="flex-1 h-14 rounded-2xl text-base font-semibold bg-gradient-to-r from-primary to-accent shadow-lg shadow-primary/25 hover:scale-[1.02] active:scale-[0.98] transition-transform"
+          >
+            Start Cooking
+            <ChevronRight className="h-5 w-5 ml-1" />
+          </Button>
+        </div>
       </div>
 
       {/* Q&A FAB */}
