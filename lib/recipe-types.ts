@@ -46,6 +46,18 @@ export interface RecipeAnalysis {
   suggestedImprovements: SuggestedImprovement[]
 }
 
+export interface SavedRecipe {
+  id: string
+  title: string
+  recipe_data: ImprovedRecipe
+  original_input?: string
+  original_analysis?: RecipeAnalysis
+  created_at: string
+  updated_at?: string
+  is_favorite?: boolean
+  last_opened_at?: string | null
+}
+
 export function serializeRecipe(recipe: ImprovedRecipe): string {
   const lines: string[] = []
 

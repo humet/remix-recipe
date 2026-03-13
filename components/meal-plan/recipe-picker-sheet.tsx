@@ -1,19 +1,14 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { ImprovedRecipe } from '@/lib/recipe-types'
+import { SavedRecipe } from '@/lib/recipe-types'
+import { useRecipeFilter } from '@/hooks/use-recipe-filter'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
 import { Badge } from '@/components/ui/badge'
-import { Clock, Users, ChefHat, Loader2, X } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { Clock, Users, ChefHat, Loader2, Search, X } from 'lucide-react'
 import { useDataChangeListener } from '@/lib/events'
-
-interface SavedRecipe {
-  id: string
-  title: string
-  recipe_data: ImprovedRecipe
-  created_at: string
-}
 
 interface RecipePickerSheetProps {
   isOpen: boolean
@@ -24,38 +19,23 @@ interface RecipePickerSheetProps {
 export function RecipePickerSheet({ isOpen, onClose, onSelect }: RecipePickerSheetProps) {
   const [recipes, setRecipes] = useState<SavedRecipe[]>([])
   const [loading, setLoading] = useState(true)
-  const [activeFilters, setActiveFilters] = useState<string[]>([])
 
-  const allTags = useMemo(() => {
-    const tagSet = new Set<string>()
-    for (const r of recipes) {
-      for (const tag of r.recipe_data.tags ?? []) {
-        tagSet.add(tag)
-      }
-    }
-    return Array.from(tagSet).sort()
-  }, [recipes])
-
-  const filteredRecipes = useMemo(() => {
-    if (activeFilters.length === 0) return recipes
-    return recipes.filter(r => {
-      const tags = r.recipe_data.tags ?? []
-      return activeFilters.every(f => tags.includes(f))
-    })
-  }, [recipes, activeFilters])
-
-  const toggleFilter = (tag: string) => {
-    setActiveFilters(prev =>
-      prev.includes(tag) ? prev.filter(f => f !== tag) : [...prev, tag]
-    )
-  }
+  const {
+    searchQuery,
+    setSearchQuery,
+    activeFilters,
+    toggleFilter,
+    setActiveFilters,
+    allTags,
+    filteredRecipes,
+  } = useRecipeFilter({ recipes })
 
   const fetchRecipes = async () => {
     setLoading(true)
     const supabase = createClient()
     const { data, error } = await supabase
       .from('saved_recipes')
-      .select('id, title, recipe_data, created_at')
+      .select('id, title, recipe_data, created_at, is_favorite, last_opened_at')
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -68,6 +48,7 @@ export function RecipePickerSheet({ isOpen, onClose, onSelect }: RecipePickerShe
   useEffect(() => {
     if (!isOpen) return
     fetchRecipes()
+    setSearchQuery('')
     setActiveFilters([])
   }, [isOpen])
 
@@ -79,6 +60,23 @@ export function RecipePickerSheet({ isOpen, onClose, onSelect }: RecipePickerShe
         <SheetHeader className="px-5 pt-5 pb-3 border-b border-border/30">
           <SheetTitle>Choose a recipe</SheetTitle>
           <SheetDescription>Pick a saved recipe for this day</SheetDescription>
+          <div className="relative mt-2">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search recipes..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 pr-9 glass border-none h-9 text-sm"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
         </SheetHeader>
 
         <div className="flex-1 overflow-y-auto p-5 pb-8">
@@ -116,8 +114,8 @@ export function RecipePickerSheet({ isOpen, onClose, onSelect }: RecipePickerShe
                 </div>
               )}
 
-              {activeFilters.length > 0 && filteredRecipes.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">No recipes match the selected filters.</p>
+              {filteredRecipes.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">No recipes match your search.</p>
               ) : (
                 <div className="flex flex-col gap-3">
                   {filteredRecipes.map((saved) => {

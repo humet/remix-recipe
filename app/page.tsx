@@ -1,12 +1,12 @@
 'use client'
 
-import { useCallback, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import Link from 'next/link'
 import { RecipeInput } from '@/components/recipe-input'
 import { RecipeDisplay } from '@/components/recipe-display'
 import { ImprovementSuggestions } from '@/components/improvement-suggestions'
 import { ProcessingOverlay } from '@/components/processing-overlay'
-import { SavedRecipes } from '@/components/saved-recipes'
+import { RecipeHighlights } from '@/components/recipe-highlights'
 import { ImprovedRecipe, RecipeAnalysis, SuggestedImprovement, serializeRecipe } from '@/lib/recipe-types'
 import { CalendarDays } from 'lucide-react'
 import { TonightsDinner } from '@/components/tonights-dinner'
@@ -26,9 +26,6 @@ export default function Home() {
   const [improveFromRecipe, setImproveFromRecipe] = useState<string | null>(null)
   const [previousRecipe, setPreviousRecipe] = useState<ImprovedRecipe | null>(null)
   const existingTagsRef = useRef<string[]>([])
-  const handleTagsChanged = useCallback((tags: string[]) => {
-    existingTagsRef.current = tags
-  }, [])
   // Step 1: Analyze the recipe and get suggestions
   const handleAnalyzeRecipe = async (
     text: string,
@@ -259,9 +256,9 @@ export default function Home() {
         </Link>
       </div>
       
-      {/* Saved Recipes */}
+      {/* Recipe Highlights */}
       <div className="px-5 pb-6">
-        <SavedRecipes onTagsChanged={handleTagsChanged} />
+        <RecipeHighlights />
       </div>
 
       {/* Example recipes hint */}

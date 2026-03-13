@@ -21,6 +21,13 @@ export default async function RecipePage({ params }: Props) {
     notFound()
   }
 
+  // Track recently used (fire-and-forget)
+  supabase
+    .from('saved_recipes')
+    .update({ last_opened_at: new Date().toISOString() })
+    .eq('id', id)
+    .then()
+
   return (
     <RecipePageClient
       initialRecipe={data.recipe_data as ImprovedRecipe}
