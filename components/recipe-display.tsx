@@ -55,7 +55,15 @@ interface RecipeDisplayProps {
 
 export function RecipeDisplay({ recipe: initialRecipe, onHome, homeHref, savedRecipeId, onSaved, originalInput, originalAnalysis, onImproveFurther, improveFurtherHref, onReimproveFromOriginal, isReimproved }: RecipeDisplayProps) {
   const router = useRouter()
-  const handleHome = onHome ?? (homeHref ? () => router.push(homeHref) : () => router.push('/'))
+  const navigateHome = () => {
+    if (onHome) {
+      onHome()
+    } else if (homeHref) {
+      router.push(homeHref)
+    } else {
+      router.push('/')
+    }
+  }
   const handleImproveFurther = onImproveFurther ?? (improveFurtherHref ? () => router.push(improveFurtherHref) : () => router.push('/'))
 
   const [recipe, setRecipe] = useState(initialRecipe)
@@ -125,6 +133,7 @@ export function RecipeDisplay({ recipe: initialRecipe, onHome, homeHref, savedRe
       setCurrentScaledServings(targetServings)
       setScalingNotes(data.scalingNotes)
       setShowScalingNotes(true)
+      if (currentSavedId) setIsSaved(false)
     } catch (error) {
       console.error('Error scaling recipe:', error)
       // Reset target to current
@@ -148,12 +157,24 @@ export function RecipeDisplay({ recipe: initialRecipe, onHome, homeHref, savedRe
   // Save state
   const [isSaved, setIsSaved] = useState(!!savedRecipeId && !isReimproved)
   const [isSaving, setIsSaving] = useState(false)
+  const [justSaved, setJustSaved] = useState(false)
   const [currentSavedId, setCurrentSavedId] = useState<string | undefined>(savedRecipeId)
   const [showSavePrompt, setShowSavePrompt] = useState(false)
+  const [showUnsavedPrompt, setShowUnsavedPrompt] = useState(false)
+
+  const hasUnsavedChanges = !isSaved && !!currentSavedId
+
+  const handleHome = () => {
+    if (hasUnsavedChanges) {
+      setShowUnsavedPrompt(true)
+    } else {
+      navigateHome()
+    }
+  }
 
   const handleSaveClick = () => {
-    // If this is a re-improved version of an existing recipe, ask what to do
-    if (isReimproved && savedRecipeId && !isSaved) {
+    if (isSaved) return
+    if (isReimproved && savedRecipeId) {
       setShowSavePrompt(true)
     } else {
       handleSave()
@@ -199,6 +220,8 @@ export function RecipeDisplay({ recipe: initialRecipe, onHome, homeHref, savedRe
         }
       }
       setIsSaved(true)
+      setJustSaved(true)
+      setTimeout(() => setJustSaved(false), 1500)
       emitDataChange('recipes-changed')
     } catch (error) {
       console.error('Error saving recipe:', error)
@@ -254,7 +277,8 @@ export function RecipeDisplay({ recipe: initialRecipe, onHome, homeHref, savedRe
         ingredients: data.ingredients,
         steps: data.steps,
       })
-      
+      if (currentSavedId) setIsSaved(false)
+
       if (data.swapNote) {
         setSwapNotes(prev => [...prev, data.swapNote])
       }
@@ -288,7 +312,8 @@ export function RecipeDisplay({ recipe: initialRecipe, onHome, homeHref, savedRe
         ingredients: data.ingredients,
         steps: data.steps,
       })
-      
+      if (currentSavedId) setIsSaved(false)
+
       if (data.removalNote) {
         setSwapNotes(prev => [...prev, `Removed ${ingredient.name}: ${data.removalNote}`])
       }
@@ -527,11 +552,15 @@ export function RecipeDisplay({ recipe: initialRecipe, onHome, homeHref, savedRe
           <h1 className="flex-1 text-lg font-semibold text-foreground truncate">{recipe.title}</h1>
           <button
             onClick={handleSaveClick}
-            disabled={isSaving}
-            className={`flex h-10 w-10 items-center justify-center rounded-full glass hover:scale-105 active:scale-95 transition-all ${
-              isSaved ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
+            disabled={isSaving || isSaved}
+            className={`flex h-10 w-10 items-center justify-center rounded-full glass transition-all ${
+              justSaved
+                ? 'text-primary scale-110'
+                : isSaved
+                  ? 'text-primary'
+                  : 'text-muted-foreground hover:text-foreground hover:scale-105 active:scale-95'
             }`}
-            aria-label={isSaved ? 'Recipe saved' : 'Save recipe'}
+            aria-label={isSaved ? 'Recipe saved' : currentSavedId ? 'Save changes' : 'Save recipe'}
           >
             {isSaving ? (
               <Loader2 className="h-5 w-5 animate-spin" />
@@ -900,6 +929,47 @@ export function RecipeDisplay({ recipe: initialRecipe, onHome, homeHref, savedRe
               <Button
                 variant="ghost"
                 onClick={() => setShowSavePrompt(false)}
+                className="w-full h-12 rounded-2xl text-muted-foreground"
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Unsaved Changes Prompt */}
+      {showUnsavedPrompt && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 animate-fade-in">
+          <div className="w-full max-w-lg p-5 pb-10 glass-strong rounded-t-3xl animate-slide-up">
+            <h3 className="text-lg font-semibold text-foreground text-center mb-2">Unsaved Changes</h3>
+            <p className="text-sm text-muted-foreground text-center mb-6">
+              You&apos;ve made changes to this recipe that haven&apos;t been saved.
+            </p>
+            <div className="flex flex-col gap-3">
+              <Button
+                onClick={async () => {
+                  setShowUnsavedPrompt(false)
+                  await handleSave()
+                  navigateHome()
+                }}
+                className="w-full h-14 rounded-2xl bg-gradient-to-r from-primary to-accent"
+              >
+                Save & Go Home
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowUnsavedPrompt(false)
+                  navigateHome()
+                }}
+                className="w-full h-14 rounded-2xl glass border-0"
+              >
+                Discard Changes
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => setShowUnsavedPrompt(false)}
                 className="w-full h-12 rounded-2xl text-muted-foreground"
               >
                 Cancel
