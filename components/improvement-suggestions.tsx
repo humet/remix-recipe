@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { RecipeAnalysis, SuggestedImprovement } from '@/lib/recipe-types'
 import { Button } from '@/components/ui/button'
@@ -68,6 +68,10 @@ export function ImprovementSuggestions({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [customRequest, setCustomRequest] = useState('')
   const [showCustomInput, setShowCustomInput] = useState(false)
+  const [validationError, setValidationError] = useState<string | null>(null)
+  const [isValidating, setIsValidating] = useState(false)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const errorRef = useRef<HTMLDivElement>(null)
 
   const toggleSelection = (id: string) => {
     setSelectedIds(prev => {
@@ -86,6 +90,54 @@ export function ImprovementSuggestions({
       imp => selectedIds.has(imp.id)
     )
     onApply(selectedImprovements, customRequest.trim())
+  }
+
+  const validateAndApply = async () => {
+    const trimmed = customRequest.trim()
+    if (!trimmed) {
+      handleApply()
+      return
+    }
+
+    setIsValidating(true)
+    setValidationError(null)
+
+    try {
+      const res = await fetch('/api/validate-request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipeTitle: analysis.title,
+          recipeSummary: analysis.summary,
+          customRequest: trimmed,
+        }),
+      })
+
+      if (!res.ok) {
+        // Fail open
+        handleApply()
+        return
+      }
+
+      const data = await res.json() as { valid: boolean; reason: string | null }
+
+      if (!data.valid) {
+        setValidationError(data.reason ?? 'That request doesn\'t seem like a recipe improvement. Try something like "make it spicier" or "add a crispy topping".')
+        // Wait for error element to render before scrolling
+        requestAnimationFrame(() => {
+          errorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        })
+        textareaRef.current?.focus()
+        return
+      }
+
+      handleApply()
+    } catch {
+      // Fail open on network errors
+      handleApply()
+    } finally {
+      setIsValidating(false)
+    }
   }
 
   const hasSelections = selectedIds.size > 0 || customRequest.trim().length > 0
@@ -195,16 +247,23 @@ export function ImprovementSuggestions({
           ) : (
             <div className="flex flex-col gap-3">
               <Textarea
+                ref={textareaRef}
                 value={customRequest}
-                onChange={(e) => setCustomRequest(e.target.value)}
+                onChange={(e) => { setCustomRequest(e.target.value); setValidationError(null) }}
                 placeholder="E.g., Make it spicier, add a crispy topping, substitute dairy with oat milk..."
                 className="min-h-[100px] text-base resize-none glass rounded-2xl border-0"
                 disabled={isLoading}
               />
+              {validationError && (
+                <div ref={errorRef} className="p-3 rounded-xl bg-red-500/10 border border-red-500/20">
+                  <p className="text-sm text-red-500 leading-relaxed">{validationError}</p>
+                </div>
+              )}
               <button
                 onClick={() => {
                   setShowCustomInput(false)
                   setCustomRequest('')
+                  setValidationError(null)
                 }}
                 className="text-sm text-muted-foreground hover:text-foreground self-start"
               >
@@ -219,11 +278,16 @@ export function ImprovementSuggestions({
       <div className="fixed bottom-0 left-0 right-0 p-5 pb-8 glass-strong border-t-0">
         <div className="flex flex-col gap-3">
           <Button
-            onClick={handleApply}
-            disabled={isLoading}
+            onClick={validateAndApply}
+            disabled={isLoading || isValidating}
             className="h-14 text-base font-semibold rounded-2xl bg-gradient-to-r from-primary to-accent hover:opacity-90 shadow-lg shadow-primary/25 transition-all hover:scale-[1.02] active:scale-[0.98]"
           >
-            {hasSelections ? (
+            {isValidating ? (
+              <span className="flex items-center gap-2">
+                <Sparkles className="h-5 w-5 animate-spin" />
+                Checking...
+              </span>
+            ) : hasSelections ? (
               <span className="flex items-center gap-2">
                 <Sparkles className="h-5 w-5" />
                 Apply {selectedIds.size > 0 ? `${selectedIds.size} improvement${selectedIds.size > 1 ? 's' : ''}` : 'custom request'}
