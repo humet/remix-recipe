@@ -13,6 +13,7 @@ import { useTimers } from '@/hooks/use-timers'
 import { usePush } from '@/components/providers'
 import { createClient } from '@/lib/supabase/client'
 import { emitDataChange } from '@/lib/events'
+import { getCached, setCache, cacheKey, invalidateCache } from '@/lib/request-cache'
 import { 
   ArrowLeft, 
   Clock, 
@@ -115,6 +116,20 @@ export function RecipeDisplay({ recipe: initialRecipe, onHome, homeHref, savedRe
       return
     }
     
+    const key = cacheKey('/api/scale-recipe', {
+      recipeTitle: initialRecipe.title,
+      newServings: targetServings,
+    })
+    const cached = getCached<{ scaledRecipe: ImprovedRecipe; scalingNotes: string[] }>(key)
+    if (cached) {
+      setRecipe(cached.scaledRecipe)
+      setCurrentScaledServings(targetServings)
+      setScalingNotes(cached.scalingNotes)
+      setShowScalingNotes(true)
+      if (currentSavedId) setIsSaved(false)
+      return
+    }
+
     setIsScaling(true)
     try {
       const response = await fetch('/api/scale-recipe', {
@@ -125,14 +140,15 @@ export function RecipeDisplay({ recipe: initialRecipe, onHome, homeHref, savedRe
           newServings: `${targetServings} servings`,
         }),
       })
-      
+
       if (!response.ok) throw new Error('Failed to scale')
-      
+
       const data = await response.json()
       setRecipe(data.scaledRecipe)
       setCurrentScaledServings(targetServings)
       setScalingNotes(data.scalingNotes)
       setShowScalingNotes(true)
+      setCache(key, data)
       if (currentSavedId) setIsSaved(false)
     } catch (error) {
       console.error('Error scaling recipe:', error)
@@ -256,7 +272,22 @@ export function RecipeDisplay({ recipe: initialRecipe, onHome, homeHref, savedRe
   const handleSwap = async (original: Ingredient, replacement: { name: string; amount: string }) => {
     setIsSwapping(true)
     setSwapSheetOpen(false)
-    
+
+    const key = cacheKey('/api/apply-swap', {
+      recipeTitle: recipe.title,
+      original: { name: original.name, amount: original.amount },
+      replacement,
+    })
+    const cached = getCached<{ ingredients: Ingredient[]; steps: unknown[]; swapNote?: string }>(key)
+    if (cached) {
+      setRecipe({ ...recipe, ingredients: cached.ingredients, steps: cached.steps as typeof recipe.steps })
+      if (currentSavedId) setIsSaved(false)
+      if (cached.swapNote) setSwapNotes(prev => [...prev, cached.swapNote!])
+      invalidateCache('/api/swap-ingredient')
+      setIsSwapping(false)
+      return
+    }
+
     try {
       const response = await fetch('/api/apply-swap', {
         method: 'POST',
@@ -267,21 +298,24 @@ export function RecipeDisplay({ recipe: initialRecipe, onHome, homeHref, savedRe
           newIngredient: replacement,
         }),
       })
-      
+
       if (!response.ok) throw new Error('Failed to apply swap')
-      
+
       const data = await response.json()
-      
+
       setRecipe({
         ...recipe,
         ingredients: data.ingredients,
         steps: data.steps,
       })
+      setCache(key, data)
       if (currentSavedId) setIsSaved(false)
 
       if (data.swapNote) {
         setSwapNotes(prev => [...prev, data.swapNote])
       }
+      // Invalidate swap-ingredient cache since recipe changed
+      invalidateCache('/api/swap-ingredient')
     } catch (error) {
       console.error('Error applying swap:', error)
     } finally {
@@ -292,7 +326,21 @@ export function RecipeDisplay({ recipe: initialRecipe, onHome, homeHref, savedRe
   const handleRemoveIngredient = async (ingredient: Ingredient) => {
     setIsSwapping(true)
     setSwapSheetOpen(false)
-    
+
+    const key = cacheKey('/api/remove-ingredient', {
+      recipeTitle: recipe.title,
+      ingredient: { name: ingredient.name, amount: ingredient.amount },
+    })
+    const cached = getCached<{ ingredients: Ingredient[]; steps: unknown[]; removalNote?: string }>(key)
+    if (cached) {
+      setRecipe({ ...recipe, ingredients: cached.ingredients, steps: cached.steps as typeof recipe.steps })
+      if (currentSavedId) setIsSaved(false)
+      if (cached.removalNote) setSwapNotes(prev => [...prev, `Removed ${ingredient.name}: ${cached.removalNote}`])
+      invalidateCache('/api/swap-ingredient')
+      setIsSwapping(false)
+      return
+    }
+
     try {
       const response = await fetch('/api/remove-ingredient', {
         method: 'POST',
@@ -302,21 +350,24 @@ export function RecipeDisplay({ recipe: initialRecipe, onHome, homeHref, savedRe
           ingredientToRemove: { name: ingredient.name, amount: ingredient.amount },
         }),
       })
-      
+
       if (!response.ok) throw new Error('Failed to remove ingredient')
-      
+
       const data = await response.json()
-      
+
       setRecipe({
         ...recipe,
         ingredients: data.ingredients,
         steps: data.steps,
       })
+      setCache(key, data)
       if (currentSavedId) setIsSaved(false)
 
       if (data.removalNote) {
         setSwapNotes(prev => [...prev, `Removed ${ingredient.name}: ${data.removalNote}`])
       }
+      // Invalidate swap-ingredient cache since recipe changed
+      invalidateCache('/api/swap-ingredient')
     } catch (error) {
       console.error('Error removing ingredient:', error)
     } finally {

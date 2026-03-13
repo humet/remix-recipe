@@ -5,6 +5,7 @@ import { X, Loader2, ArrowRight, Sparkles, MessageSquare, Trash2 } from 'lucide-
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Ingredient } from '@/lib/recipe-types'
+import { getCached, setCache, cacheKey } from '@/lib/request-cache'
 
 interface Alternative {
   name: string
@@ -53,10 +54,20 @@ export function IngredientSwapSheet({
 
   const fetchAlternatives = async () => {
     if (!ingredient) return
-    
+
+    const key = cacheKey('/api/swap-ingredient', {
+      ingredient: { name: ingredient.name, amount: ingredient.amount },
+      recipeContext,
+    })
+    const cached = getCached<{ alternatives: Alternative[] }>(key)
+    if (cached) {
+      setAlternatives(cached.alternatives)
+      return
+    }
+
     setIsLoading(true)
     setError(null)
-    
+
     try {
       const response = await fetch('/api/swap-ingredient', {
         method: 'POST',
@@ -66,11 +77,12 @@ export function IngredientSwapSheet({
           recipeContext,
         }),
       })
-      
+
       if (!response.ok) throw new Error('Failed to fetch alternatives')
-      
+
       const data = await response.json()
       setAlternatives(data.alternatives)
+      setCache(key, data)
     } catch (err) {
       setError('Could not load alternatives. Try again.')
       console.error('Error fetching alternatives:', err)
