@@ -1,7 +1,8 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
+import { createClient } from '@/lib/supabase/client'
 import { RecipeInput } from '@/components/recipe-input'
 import { RecipeDisplay } from '@/components/recipe-display'
 import { ImprovementSuggestions } from '@/components/improvement-suggestions'
@@ -26,6 +27,25 @@ export default function Home() {
   const [improveFromRecipe, setImproveFromRecipe] = useState<string | null>(null)
   const [previousRecipe, setPreviousRecipe] = useState<ImprovedRecipe | null>(null)
   const existingTagsRef = useRef<string[]>([])
+
+  // Load existing tags from saved recipes so the AI can reuse them
+  useEffect(() => {
+    const supabase = createClient()
+    supabase
+      .from('saved_recipes')
+      .select('recipe_data')
+      .then(({ data }) => {
+        if (!data) return
+        const tagSet = new Set<string>()
+        for (const row of data) {
+          for (const tag of (row.recipe_data as { tags?: string[] }).tags ?? []) {
+            tagSet.add(tag)
+          }
+        }
+        existingTagsRef.current = Array.from(tagSet)
+      })
+  }, [])
+
   // Step 1: Analyze the recipe and get suggestions
   const handleAnalyzeRecipe = async (
     text: string,

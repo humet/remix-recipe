@@ -5,20 +5,46 @@ interface UseRecipeFilterOptions {
   recipes: SavedRecipe[]
 }
 
+/** Canonical form for near-duplicate detection: lowercase, hyphens/underscores → spaces */
+function canonicalize(s: string) {
+  return s.toLowerCase().replace(/[-_]/g, ' ').replace(/\s+/g, ' ').trim()
+}
+
 export function useRecipeFilter({ recipes }: UseRecipeFilterOptions) {
   const [searchQuery, setSearchQuery] = useState('')
   const [activeFilters, setActiveFilters] = useState<string[]>([])
 
-  const allTags = useMemo(() => {
-    const tagSet = new Set<string>()
+  // Build canonical → { bestSpelling, count } map, then return sorted unique tags
+  const { allTags, tagCounts } = useMemo(() => {
+    const canonicalMap = new Map<string, { spelling: string; count: number }>()
+
     for (const r of recipes) {
       for (const tag of r.recipe_data.tags ?? []) {
-        tagSet.add(tag)
+        const key = canonicalize(tag)
+        const existing = canonicalMap.get(key)
+        if (existing) {
+          existing.count++
+          // Keep whichever spelling appears more often (first one wins ties)
+        } else {
+          canonicalMap.set(key, { spelling: tag, count: 1 })
+        }
       }
     }
-    return Array.from(tagSet).sort()
+
+    // Sort by frequency (most used first)
+    const sorted = Array.from(canonicalMap.values())
+      .sort((a, b) => b.count - a.count)
+
+    const tags = sorted.map(e => e.spelling)
+    const counts = new Map<string, number>()
+    for (const e of sorted) {
+      counts.set(e.spelling, e.count)
+    }
+
+    return { allTags: tags, tagCounts: counts }
   }, [recipes])
 
+  // Map active filters through canonicalization so near-duplicate tags match recipes
   const filteredRecipes = useMemo(() => {
     let result = recipes
 
@@ -33,11 +59,12 @@ export function useRecipeFilter({ recipes }: UseRecipeFilterOptions) {
       })
     }
 
-    // Tag filter (AND logic)
+    // Tag filter (AND logic) — match by canonical form so near-duplicates work
     if (activeFilters.length > 0) {
+      const activeCanonical = activeFilters.map(canonicalize)
       result = result.filter(r => {
-        const tags = r.recipe_data.tags ?? []
-        return activeFilters.every(f => tags.includes(f))
+        const recipeTags = (r.recipe_data.tags ?? []).map(canonicalize)
+        return activeCanonical.every(f => recipeTags.includes(f))
       })
     }
 
@@ -76,6 +103,7 @@ export function useRecipeFilter({ recipes }: UseRecipeFilterOptions) {
     clearFilters,
     setActiveFilters,
     allTags,
+    tagCounts,
     filteredRecipes,
   }
 }
