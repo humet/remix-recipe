@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useChat } from '@ai-sdk/react'
 import { DefaultChatTransport, lastAssistantMessageIsCompleteWithApprovalResponses } from 'ai'
-import { X, MessageCircle, Send, Loader2, AlertCircle, Sparkles, Check } from 'lucide-react'
+import { X, MessageCircle, Send, Loader2, AlertCircle, Sparkles, Check, RotateCcw } from 'lucide-react'
 import { ImprovedRecipe } from '@/lib/recipe-types'
 
 interface RecipeQASheetProps {
@@ -26,7 +26,7 @@ export function RecipeQASheet({ isOpen, onClose, recipeContext, recipe, onRecipe
   const scrollRef = useRef<HTMLDivElement>(null)
   const [appliedToolCallIds] = useState(() => new Set<string>())
 
-  const { messages, sendMessage, status, setMessages, stop, error, addToolApprovalResponse } = useChat({
+  const { messages, sendMessage, status, setMessages, stop, error, clearError, regenerate, addToolApprovalResponse } = useChat({
     transport: new DefaultChatTransport({
       api: '/api/ask-recipe',
       body: { recipeContext, recipe },
@@ -74,8 +74,17 @@ export function RecipeQASheet({ isOpen, onClose, recipeContext, recipe, onRecipe
 
   const handleSend = (text: string) => {
     if (!text.trim() || !isReady) return
+    if (error) clearError()
     sendMessage({ text: text.trim() })
     setInput('')
+  }
+
+  const getErrorMessage = (err: Error) => {
+    const msg = err.message?.toLowerCase() ?? ''
+    if (msg.includes('rate limit')) return 'Rate limit exceeded. Please wait a moment.'
+    if (msg.includes('network') || msg.includes('fetch')) return 'Network error. Check your connection.'
+    if (msg.includes('timeout')) return 'Request timed out. Try again.'
+    return 'Something went wrong. Try asking again.'
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -213,9 +222,18 @@ export function RecipeQASheet({ isOpen, onClose, recipeContext, recipe, onRecipe
 
                 {/* Error state */}
                 {error && (
-                  <div className="flex items-center gap-2 px-4 py-2.5 glass rounded-2xl text-sm text-destructive">
-                    <AlertCircle className="h-4 w-4 shrink-0" />
-                    <span>Something went wrong. Try asking again.</span>
+                  <div className="flex items-center justify-between gap-2 px-4 py-2.5 glass rounded-2xl text-sm text-destructive">
+                    <div className="flex items-center gap-2">
+                      <AlertCircle className="h-4 w-4 shrink-0" />
+                      <span>{getErrorMessage(error)}</span>
+                    </div>
+                    <button
+                      onClick={() => regenerate()}
+                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg glass text-xs font-medium text-foreground hover:text-primary transition-colors shrink-0"
+                    >
+                      <RotateCcw className="h-3 w-3" />
+                      Try again
+                    </button>
                   </div>
                 )}
               </div>
@@ -290,6 +308,16 @@ function ToolApprovalCard({
   }
 
   if (part.state === 'approval-responded' || part.state === 'input-available') {
+    if (part.approval?.approved === false) {
+      return (
+        <div className="glass rounded-2xl p-4 border border-border/30">
+          <div className="flex items-center gap-2">
+            <X className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm text-muted-foreground">Change declined</span>
+          </div>
+        </div>
+      )
+    }
     return (
       <div className="glass rounded-2xl p-4 border border-primary/20">
         <div className="flex items-center gap-2">

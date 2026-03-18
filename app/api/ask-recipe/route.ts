@@ -56,6 +56,7 @@ RULES:
 TOOL USAGE:
 - When the user asks about making a change to the recipe (substituting an ingredient, adjusting quantities, adding/removing ingredients, changing a technique, modifying for dietary needs), you MUST first write a helpful text response explaining the change (why it works, flavor impact, any tips), and THEN call the modifyRecipe tool. Never call the tool without providing a text explanation first.
 - When the user asks a pure question (what equipment do I need, how long to store, what to serve with, general cooking technique questions), just answer in text without calling any tool.
+- When the modifyRecipe tool call is denied by the user, acknowledge their choice briefly and do NOT say the change was applied. Do not retry the same tool call.
 
 RECIPE:
 ${recipeContext}`,
@@ -74,12 +75,13 @@ ${recipeContext}`,
 
             const recipeJson = JSON.stringify(recipe)
 
-            const { output } = await generateText({
-              model: 'google/gemini-3-flash',
-              output: Output.object({
-                schema: modifiedRecipeSchema,
-              }),
-              prompt: `You are an expert chef. Apply the following modification to this recipe and return the complete updated recipe.
+            try {
+              const { output } = await generateText({
+                model: 'google/gemini-3-flash',
+                output: Output.object({
+                  schema: modifiedRecipeSchema,
+                }),
+                prompt: `You are an expert chef. Apply the following modification to this recipe and return the complete updated recipe.
 
 MODIFICATION: ${modification}
 
@@ -91,16 +93,31 @@ CRITICAL REQUIREMENTS:
 
 CURRENT RECIPE (JSON):
 ${recipeJson}`,
-            })
+              })
 
-            return { recipe: output }
+              if (!output) {
+                return { error: 'Failed to generate modified recipe' }
+              }
+
+              return { recipe: output }
+            } catch (e) {
+              console.error('Error modifying recipe:', e)
+              return { error: 'Failed to modify recipe. Please try again.' }
+            }
           },
         },
       },
       stopWhen: stepCountIs(3),
     })
 
-    return result.toUIMessageStreamResponse()
+    return result.toUIMessageStreamResponse({
+      onError: (error: unknown) => {
+        const message = error instanceof Error ? error.message : ''
+        if (message.includes('rate limit')) return 'Rate limit exceeded. Please wait a moment.'
+        if (message.includes('fetch')) return 'Network error. Check your connection.'
+        return 'Something went wrong. Try again.'
+      },
+    })
   } catch (error) {
     console.error('Error in ask-recipe:', error)
     return Response.json(
