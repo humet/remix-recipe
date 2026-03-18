@@ -186,7 +186,7 @@ export function useTimers(pushSubscription?: PushSubscription | null) {
     if ('Notification' in window && Notification.permission === 'granted' && document.hidden) {
       new Notification('Timer Complete', {
         body: `${label} is done!`,
-        icon: '/icon.svg',
+        icon: '/web-app-manifest-192x192.png',
         tag: 'timer-alert',
       })
     }

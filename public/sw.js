@@ -1,9 +1,8 @@
-const CACHE_NAME = 'remix-v2'
+const CACHE_NAME = 'remix-v3'
 const APP_SHELL = [
   '/',
   '/manifest.json',
-  '/icon.svg',
-  '/apple-icon.png',
+  '/icon0.svg',
 ]
 
 // Install: pre-cache app shell
@@ -79,8 +78,8 @@ self.addEventListener('push', (event) => {
   event.waitUntil(
     self.registration.showNotification(title, {
       body,
-      icon: '/icon-192x192.png',
-      badge: '/icon-72x72.png',
+      icon: '/web-app-manifest-192x192.png',
+      badge: '/web-app-manifest-192x192.png',
       tag,
       vibrate: [200, 100, 200, 100, 200],
       data: { url },

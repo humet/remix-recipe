@@ -3,7 +3,7 @@
 import { useState, useRef, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
-import { ChefHat, ImagePlus, Sparkles, X, Clipboard } from 'lucide-react'
+import { ImagePlus, Sparkles, X, Clipboard } from 'lucide-react'
 
 interface ImageData {
   base64: string
@@ -122,13 +122,8 @@ export function RecipeInput({ onImprove, isLoading }: RecipeInputProps) {
     <div className="flex flex-col gap-6 p-5 pt-8">
       {/* Header */}
       <div className="flex flex-col items-center gap-4 pb-2">
-        <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-primary to-accent text-white shadow-lg shadow-primary/25">
-          <ChefHat className="h-10 w-10" />
-        </div>
-        <div className="text-center">
-          <h1 className="text-3xl font-semibold text-foreground tracking-tight">Remix</h1>
-          <p className="text-sm text-muted-foreground mt-1">Remix any recipe to make it yours</p>
-        </div>
+        <img src="/remix-logo.svg" alt="Remix" className="h-40 w-40" />
+        <p className="text-sm text-muted-foreground">Remix any recipe to make it yours</p>
       </div>
 
       {/* Input Area */}
