@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { SavedRecipe } from '@/lib/recipe-types'
 import { useRecipeFilter } from '@/hooks/use-recipe-filter'
@@ -9,6 +9,38 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Clock, Users, ChefHat, Loader2, Search, X } from 'lucide-react'
 import { useDataChangeListener } from '@/lib/events'
+
+function useKeyboardOffset() {
+  const [offset, setOffset] = useState({ keyboardHeight: 0, viewportHeight: 0, offsetTop: 0 })
+  const rafRef = useRef(0)
+
+  useEffect(() => {
+    const vv = window.visualViewport
+    if (!vv) return
+
+    const update = () => {
+      cancelAnimationFrame(rafRef.current)
+      rafRef.current = requestAnimationFrame(() => {
+        const keyboardHeight = window.innerHeight - vv.height
+        setOffset({
+          keyboardHeight: Math.max(0, keyboardHeight),
+          viewportHeight: vv.height,
+          offsetTop: vv.offsetTop,
+        })
+      })
+    }
+    update()
+    vv.addEventListener('resize', update)
+    vv.addEventListener('scroll', update)
+    return () => {
+      cancelAnimationFrame(rafRef.current)
+      vv.removeEventListener('resize', update)
+      vv.removeEventListener('scroll', update)
+    }
+  }, [])
+
+  return offset
+}
 
 interface RecipePickerSheetProps {
   isOpen: boolean
@@ -19,6 +51,7 @@ interface RecipePickerSheetProps {
 export function RecipePickerSheet({ isOpen, onClose, onSelect }: RecipePickerSheetProps) {
   const [recipes, setRecipes] = useState<SavedRecipe[]>([])
   const [loading, setLoading] = useState(true)
+  const { keyboardHeight, viewportHeight, offsetTop } = useKeyboardOffset()
 
   const {
     searchQuery,
@@ -56,7 +89,16 @@ export function RecipePickerSheet({ isOpen, onClose, onSelect }: RecipePickerShe
 
   return (
     <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <SheetContent side="bottom" className="rounded-t-3xl max-h-[85vh] overflow-hidden flex flex-col p-0">
+      <SheetContent
+        side="bottom"
+        className="rounded-t-3xl overflow-hidden flex flex-col p-0"
+        style={{
+          maxHeight: keyboardHeight > 0
+            ? viewportHeight + keyboardHeight
+            : viewportHeight > 0 ? viewportHeight * 0.85 : '85vh',
+          transform: offsetTop > 0 ? `translateY(${offsetTop}px)` : undefined,
+        }}
+      >
         <SheetHeader className="px-5 pt-5 pb-3 border-b border-border/30">
           <SheetTitle>Choose a recipe</SheetTitle>
           <SheetDescription>Pick a saved recipe for this day</SheetDescription>
@@ -79,7 +121,7 @@ export function RecipePickerSheet({ isOpen, onClose, onSelect }: RecipePickerShe
           </div>
         </SheetHeader>
 
-        <div className="flex-1 overflow-y-auto p-5 pb-8">
+        <div className="flex-1 overflow-y-auto p-5" style={{ paddingBottom: keyboardHeight > 0 ? keyboardHeight + 20 : 32 }}>
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -91,12 +133,12 @@ export function RecipePickerSheet({ isOpen, onClose, onSelect }: RecipePickerShe
           ) : (
             <div className="flex flex-col gap-4">
               {allTags.length > 0 && (
-                <div className="flex flex-wrap gap-2 items-center">
+                <div className="flex gap-2 items-center overflow-x-auto no-scrollbar -mx-5 px-5">
                   {allTags.map(tag => (
                     <Badge
                       key={tag}
                       variant={activeFilters.includes(tag) ? 'default' : 'outline'}
-                      className="cursor-pointer select-none"
+                      className="cursor-pointer select-none shrink-0"
                       onClick={() => toggleFilter(tag)}
                     >
                       {tag}
@@ -105,7 +147,7 @@ export function RecipePickerSheet({ isOpen, onClose, onSelect }: RecipePickerShe
                   {activeFilters.length > 0 && (
                     <button
                       onClick={() => setActiveFilters([])}
-                      className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors ml-1"
+                      className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors ml-1 shrink-0"
                     >
                       <X className="h-3 w-3" />
                       Clear
