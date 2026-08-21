@@ -4,19 +4,19 @@ Remix is a mobile-first cooking companion that can take an existing recipe and i
 
 Paste a recipe or photograph one, choose from targeted AI suggestions, then work with the result interactively: scale servings, swap/remove ingredients, save recipes, and run cooking timers that continue to notify you when the app is backgrounded.
 
-## Why I built it
+## Why I built this
 
-Most AI recipe demos stop at generating text. Remix treats the recipe as a piece of **structured, editable product state** instead.
+I was already using ChatGPT to adapt recipes I found online — changing quantities, swapping ingredients, simplifying methods, or improving them to suit how I actually cook.
 
-The interesting part is what happens after the first model response:
+The problem was that the useful version of the recipe then lived inside a chat.
 
-- recipe text/images are parsed into a typed structure
-- suggested improvements are constrained to useful cooking transformations
-- serving changes must update ingredients and instructions consistently
-- ingredient swaps/removals must propagate through the recipe rather than changing one sentence
-- saved recipes need stable tags/search behaviour instead of model-created taxonomy drift
-- timers need to keep working as a real mobile/PWA feature, not just while the page is foregrounded
-- model failures, declined suggestions, and malformed responses have to degrade gracefully
+I couldn't easily save the edited recipe, and the chat interface wasn't a particularly good cooking interface either. While cooking, I didn't want to keep scrolling backwards and forwards between ingredients, quantities, and method steps.
+
+I also wanted something cleaner than many recipe websites, where the actual recipe can be buried beneath ads, pop-ups, and long-form content.
+
+Remix grew out of those frustrations: a place to import a recipe, turn it into structured recipe data, improve or adapt it with AI, save the result, and then actually cook from it in an interface designed for the kitchen.
+
+The goal is for AI to be useful without getting in the way — helping reshape the recipe while the application keeps the result structured, persistent, and practical.
 
 ## Features
 
