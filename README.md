@@ -18,6 +18,34 @@ Remix grew out of those frustrations: a place to import a recipe, turn it into s
 
 The goal is for AI to be useful without getting in the way — helping reshape the recipe while the application keeps the result structured, persistent, and practical.
 
+## Product flow
+
+Remix turns recipes from the web into something you can adapt, save, and actually cook from.
+
+### 1. Import almost any recipe
+
+<a href="docs/screenshots/import-recipe.PNG">
+  <img src="docs/screenshots/import-recipe.PNG" width="620" alt="Importing a recipe into Remix from screenshots" />
+</a>
+
+Paste a recipe or add screenshots and Remix turns the source material into structured recipe data.
+
+### 2. Make the recipe yours
+
+<a href="docs/screenshots/ai-improvements.PNG">
+  <img src="docs/screenshots/ai-improvements.PNG" width="620" alt="AI-assisted recipe improvements in Remix" />
+</a>
+
+AI can suggest and apply improvements while keeping the resulting recipe structured, editable, and saved rather than leaving the useful version buried in a conversation.
+
+### 3. Actually cook from it
+
+<a href="docs/screenshots/cooking-mode.PNG">
+  <img src="docs/screenshots/cooking-mode.PNG" width="620" alt="Remix step-by-step cooking mode with inline quantities and timer" />
+</a>
+
+Cooking mode puts quantities directly into the instructions, breaks the recipe into clear steps, and keeps timers alongside the work — so there is no jumping backwards and forwards between an ingredients list and the method.
+
 ## Features
 
 - **Recipe input** — paste text or upload/photograph a recipe image
