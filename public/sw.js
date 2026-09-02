@@ -1,6 +1,8 @@
-const CACHE_NAME = 'remix-v3'
+const CACHE_NAME = 'remix-v4'
+// Deliberately does NOT include '/'. The app is behind a login, and a
+// cached HTML shell would be served without ever reaching the auth gate —
+// handing a signed-out visitor the authed page, or vice versa.
 const APP_SHELL = [
-  '/',
   '/manifest.json',
   '/icon0.svg',
 ]
@@ -29,6 +31,11 @@ self.addEventListener('fetch', (event) => {
 
   // Network-only for API routes, non-GET, and cross-origin (e.g. Supabase)
   if (url.origin !== self.location.origin || url.pathname.startsWith('/api') || event.request.method !== 'GET') {
+    return
+  }
+
+  // Never cache navigations — every page load must reach the auth gate.
+  if (event.request.mode === 'navigate') {
     return
   }
 

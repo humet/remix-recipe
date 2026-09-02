@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Ingredient } from '@/lib/recipe-types'
 import { getCached, setCache, cacheKey } from '@/lib/request-cache'
+import { aiFetch } from '@/lib/ai/fetch'
 
 interface Alternative {
   name: string
@@ -69,13 +70,9 @@ export function IngredientSwapSheet({
     setError(null)
 
     try {
-      const response = await fetch('/api/swap-ingredient', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ingredient: { name: ingredient.name, amount: ingredient.amount },
-          recipeContext,
-        }),
+      const response = await aiFetch('/api/swap-ingredient', {
+        ingredient: { name: ingredient.name, amount: ingredient.amount },
+        recipeContext,
       })
 
       if (!response.ok) throw new Error('Failed to fetch alternatives')

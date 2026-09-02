@@ -1,5 +1,6 @@
 import { generateText, Output } from 'ai'
 import { z } from 'zod'
+import { requireUser } from '@/lib/auth/require-user'
 
 const analysisSchema = z.object({
   title: z.string().describe('The original recipe title'),
@@ -16,6 +17,9 @@ const analysisSchema = z.object({
 })
 
 export async function POST(req: Request) {
+  const { response: unauthorized } = await requireUser()
+  if (unauthorized) return unauthorized
+
   try {
     const { recipeText, images } = await req.json() as { 
       recipeText: string

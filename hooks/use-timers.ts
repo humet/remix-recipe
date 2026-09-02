@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { isDemoMode } from '@/lib/demo/mode'
 
 export interface Timer {
   id: string
@@ -42,7 +43,8 @@ function createBeepSound(audioContext: AudioContext) {
 // --- Push notification helpers ---
 
 function schedulePush(timerId: string, label: string, seconds: number, subscription: PushSubscription | null) {
-  if (!subscription) return
+  // Demo has no server identity — timers stay purely local.
+  if (isDemoMode() || !subscription) return
   const fireAt = new Date(Date.now() + seconds * 1000).toISOString()
   fetch('/api/timer-push/schedule', {
     method: 'POST',
@@ -52,6 +54,7 @@ function schedulePush(timerId: string, label: string, seconds: number, subscript
 }
 
 function cancelPush(timerId: string) {
+  if (isDemoMode()) return
   fetch('/api/timer-push/cancel', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

@@ -5,6 +5,7 @@ import { RecipeDisplay } from '@/components/recipe-display'
 import { ImprovementSuggestions } from '@/components/improvement-suggestions'
 import { ProcessingOverlay } from '@/components/processing-overlay'
 import { ImprovedRecipe, RecipeAnalysis, SuggestedImprovement, serializeRecipe } from '@/lib/recipe-types'
+import { aiFetch } from '@/lib/ai/fetch'
 
 interface RecipePageClientProps {
   initialRecipe: ImprovedRecipe
@@ -38,10 +39,9 @@ export function RecipePageClient({
     try {
       const serialized = serializeRecipe(recipe)
 
-      const response = await fetch('/api/analyze-recipe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ recipeText: serialized, images: [] }),
+      const response = await aiFetch('/api/analyze-recipe', {
+        recipeText: serialized,
+        images: [],
       })
 
       if (!response.ok) {
@@ -85,18 +85,14 @@ export function RecipePageClient({
     setError(null)
 
     try {
-      const response = await fetch('/api/improve-recipe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          parsedRecipe: improveFromRecipe ?? analysis.parsedRecipe,
-          selectedImprovements: selectedImprovements.map(imp => ({
-            title: imp.title,
-            description: imp.description,
-          })),
-          customRequest,
-          existingTags: [],
-        }),
+      const response = await aiFetch('/api/improve-recipe', {
+        parsedRecipe: improveFromRecipe ?? analysis.parsedRecipe,
+        selectedImprovements: selectedImprovements.map(imp => ({
+          title: imp.title,
+          description: imp.description,
+        })),
+        customRequest,
+        existingTags: [],
       })
 
       if (!response.ok) {

@@ -1,6 +1,8 @@
 import { notFound } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
-import { ImprovedRecipe, RecipeAnalysis } from '@/lib/recipe-types'
+import { after } from 'next/server'
+import { getRecipeForPage, touchRecipeOnServer } from '@/lib/data/server'
+import { isDemoRequest } from '@/lib/demo/is-demo'
+import { DemoRecipeLoader } from '@/components/demo/demo-recipe-loader'
 import { RecipePageClient } from './recipe-page-client'
 
 interface Props {
@@ -9,31 +11,28 @@ interface Props {
 
 export default async function RecipePage({ params }: Props) {
   const { id } = await params
-  const supabase = await createClient()
 
-  const { data, error } = await supabase
-    .from('saved_recipes')
-    .select('id, title, recipe_data, original_input, original_analysis')
-    .eq('id', id)
-    .single()
+  // Demo recipes live in the visitor's localStorage, so the lookup has to
+  // happen client-side.
+  if (await isDemoRequest()) {
+    return <DemoRecipeLoader id={id} />
+  }
 
-  if (error || !data) {
+  const data = await getRecipeForPage(id)
+
+  if (!data) {
     notFound()
   }
 
-  // Track recently used (fire-and-forget)
-  supabase
-    .from('saved_recipes')
-    .update({ last_opened_at: new Date().toISOString() })
-    .eq('id', id)
-    .then()
+  // Track recently used without holding up the response.
+  after(() => touchRecipeOnServer(id))
 
   return (
     <RecipePageClient
-      initialRecipe={data.recipe_data as ImprovedRecipe}
+      initialRecipe={data.recipe_data}
       savedRecipeId={data.id}
-      originalInput={data.original_input as string | undefined}
-      originalAnalysis={data.original_analysis as RecipeAnalysis | undefined}
+      originalInput={data.original_input}
+      originalAnalysis={data.original_analysis}
     />
   )
 }

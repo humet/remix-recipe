@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/client'
+import { listRecipeTags } from '@/lib/data'
+import { aiFetch } from '@/lib/ai/fetch'
 import { RecipeInput } from '@/components/recipe-input'
 import { RecipeDisplay } from '@/components/recipe-display'
 import { ImprovementSuggestions } from '@/components/improvement-suggestions'
@@ -11,6 +12,7 @@ import { RecipeHighlights } from '@/components/recipe-highlights'
 import { ImprovedRecipe, RecipeAnalysis, SuggestedImprovement, serializeRecipe } from '@/lib/recipe-types'
 import { CalendarDays } from 'lucide-react'
 import { TonightsDinner } from '@/components/tonights-dinner'
+import { SignOutButton } from '@/components/sign-out-button'
 
 type AppState = 'input' | 'suggestions' | 'result'
 type ProcessingType = 'analyzing' | 'improving' | null
@@ -30,20 +32,9 @@ export default function Home() {
 
   // Load existing tags from saved recipes so the AI can reuse them
   useEffect(() => {
-    const supabase = createClient()
-    supabase
-      .from('saved_recipes')
-      .select('recipe_data')
-      .then(({ data }) => {
-        if (!data) return
-        const tagSet = new Set<string>()
-        for (const row of data) {
-          for (const tag of (row.recipe_data as { tags?: string[] }).tags ?? []) {
-            tagSet.add(tag)
-          }
-        }
-        existingTagsRef.current = Array.from(tagSet)
-      })
+    listRecipeTags().then((tags) => {
+      existingTagsRef.current = tags
+    })
   }, [])
 
   // Step 1: Analyze the recipe and get suggestions
@@ -56,15 +47,9 @@ export default function Home() {
     setOriginalInput(text || (images.length > 0 ? '[Image input]' : ''))
 
     try {
-      const response = await fetch('/api/analyze-recipe', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          recipeText: text,
-          images,
-        }),
+      const response = await aiFetch('/api/analyze-recipe', {
+        recipeText: text,
+        images,
       })
 
       if (!response.ok) {
@@ -96,20 +81,14 @@ export default function Home() {
     setError(null)
 
     try {
-      const response = await fetch('/api/improve-recipe', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          parsedRecipe: improveFromRecipe ?? analysis.parsedRecipe,
-          selectedImprovements: selectedImprovements.map(imp => ({
-            title: imp.title,
-            description: imp.description,
-          })),
-          customRequest,
-          existingTags: existingTagsRef.current,
-        }),
+      const response = await aiFetch('/api/improve-recipe', {
+        parsedRecipe: improveFromRecipe ?? analysis.parsedRecipe,
+        selectedImprovements: selectedImprovements.map(imp => ({
+          title: imp.title,
+          description: imp.description,
+        })),
+        customRequest,
+        existingTags: existingTagsRef.current,
       })
 
       if (!response.ok) {
@@ -179,10 +158,9 @@ export default function Home() {
     try {
       const serialized = serializeRecipe(recipe)
 
-      const response = await fetch('/api/analyze-recipe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ recipeText: serialized, images: [] }),
+      const response = await aiFetch('/api/analyze-recipe', {
+        recipeText: serialized,
+        images: [],
       })
 
       if (!response.ok) {
@@ -282,12 +260,16 @@ export default function Home() {
       </div>
 
       {/* Example recipes hint */}
-      <div className="px-5 pb-8">
+      <div className="px-5 pb-2">
         <div className="p-4 glass rounded-2xl">
           <p className="text-sm text-muted-foreground text-center leading-relaxed">
             Paste any recipe text, screenshot, or photo. The AI will suggest improvements like making it healthier, tastier, or kid-friendly.
           </p>
         </div>
+      </div>
+
+      <div className="px-5 pb-8">
+        <SignOutButton />
       </div>
     </main>
   )

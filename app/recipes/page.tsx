@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/client'
-import { SavedRecipe } from '@/lib/recipe-types'
+import { deleteRecipe, listRecipes, setFavorite, type RecipeListRow } from '@/lib/data'
 import { useRecipeFilter } from '@/hooks/use-recipe-filter'
 import { emitDataChange, useDataChangeListener } from '@/lib/events'
 import { Badge } from '@/components/ui/badge'
@@ -13,7 +12,7 @@ import { Clock, Users, ChefHat, Heart, Trash2, Loader2, Search, X, ArrowLeft } f
 const MAX_VISIBLE_TAGS = 12
 
 export default function RecipesPage() {
-  const [recipes, setRecipes] = useState<SavedRecipe[]>([])
+  const [recipes, setRecipes] = useState<RecipeListRow[]>([])
   const [loading, setLoading] = useState(true)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [showAllTags, setShowAllTags] = useState(false)
@@ -30,16 +29,7 @@ export default function RecipesPage() {
   } = useRecipeFilter({ recipes })
 
   const fetchRecipes = async () => {
-    const supabase = createClient()
-    const { data, error } = await supabase
-      .from('saved_recipes')
-      .select('*')
-      .order('created_at', { ascending: false })
-
-    if (error) {
-      console.error('Error fetching recipes:', error)
-    }
-    setRecipes(data ?? [])
+    setRecipes(await listRecipes())
     setLoading(false)
   }
 
@@ -49,21 +39,20 @@ export default function RecipesPage() {
 
   useDataChangeListener('recipes-changed', fetchRecipes)
 
-  const toggleFavorite = async (e: React.MouseEvent, recipe: SavedRecipe) => {
+  const toggleFavorite = async (e: React.MouseEvent, recipe: RecipeListRow) => {
     e.preventDefault()
     e.stopPropagation()
     const newVal = !recipe.is_favorite
     setRecipes(prev => prev.map(r => r.id === recipe.id ? { ...r, is_favorite: newVal } : r))
-    const supabase = createClient()
-    await supabase.from('saved_recipes').update({ is_favorite: newVal }).eq('id', recipe.id)
+    await setFavorite(recipe.id, newVal)
+    emitDataChange('recipes-changed')
   }
 
   const handleDelete = async (e: React.MouseEvent, id: string) => {
     e.preventDefault()
     e.stopPropagation()
     setDeletingId(id)
-    const supabase = createClient()
-    await supabase.from('saved_recipes').delete().eq('id', id)
+    await deleteRecipe(id)
     setRecipes(prev => prev.filter(r => r.id !== id))
     setDeletingId(null)
     emitDataChange('recipes-changed')

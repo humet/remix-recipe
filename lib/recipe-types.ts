@@ -58,6 +58,17 @@ export interface SavedRecipe {
   last_opened_at?: string | null
 }
 
+export interface MealPlanEntry {
+  id: string
+  recipe_id: string
+  plan_date: string
+  recipe: {
+    id: string
+    title: string
+    recipe_data: ImprovedRecipe
+  }
+}
+
 export function serializeRecipe(recipe: ImprovedRecipe): string {
   const lines: string[] = []
 

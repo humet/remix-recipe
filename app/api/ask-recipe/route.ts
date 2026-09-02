@@ -1,6 +1,7 @@
 import { streamText, UIMessage, convertToModelMessages, generateText, Output, stepCountIs } from 'ai'
 import { z } from 'zod'
 import { ImprovedRecipe } from '@/lib/recipe-types'
+import { requireUser } from '@/lib/auth/require-user'
 
 export const runtime = 'edge'
 
@@ -36,6 +37,9 @@ const modifiedRecipeSchema = z.object({
 })
 
 export async function POST(req: Request) {
+  const { response: unauthorized } = await requireUser()
+  if (unauthorized) return unauthorized
+
   try {
     const { messages, recipeContext, recipe }: {
       messages: UIMessage[]

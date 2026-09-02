@@ -1,8 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
-import { SavedRecipe } from '@/lib/recipe-types'
+import { listRecipes, type RecipeListRow } from '@/lib/data'
 import { useRecipeFilter } from '@/hooks/use-recipe-filter'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
 import { Badge } from '@/components/ui/badge'
@@ -49,7 +48,7 @@ interface RecipePickerSheetProps {
 }
 
 export function RecipePickerSheet({ isOpen, onClose, onSelect }: RecipePickerSheetProps) {
-  const [recipes, setRecipes] = useState<SavedRecipe[]>([])
+  const [recipes, setRecipes] = useState<RecipeListRow[]>([])
   const [loading, setLoading] = useState(true)
   const { keyboardHeight, viewportHeight, offsetTop } = useKeyboardOffset()
 
@@ -65,16 +64,7 @@ export function RecipePickerSheet({ isOpen, onClose, onSelect }: RecipePickerShe
 
   const fetchRecipes = async () => {
     setLoading(true)
-    const supabase = createClient()
-    const { data, error } = await supabase
-      .from('saved_recipes')
-      .select('id, title, recipe_data, created_at, is_favorite, last_opened_at')
-      .order('created_at', { ascending: false })
-
-    if (error) {
-      console.error('Error fetching recipes:', error)
-    }
-    setRecipes(data ?? [])
+    setRecipes(await listRecipes())
     setLoading(false)
   }
 

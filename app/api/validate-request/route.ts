@@ -1,5 +1,6 @@
 import { generateText, Output } from 'ai'
 import { z } from 'zod'
+import { requireUser } from '@/lib/auth/require-user'
 
 const validationSchema = z.object({
   valid: z.boolean().describe('Whether the custom request is a reasonable recipe improvement request'),
@@ -7,6 +8,9 @@ const validationSchema = z.object({
 })
 
 export async function POST(req: Request) {
+  const { response: unauthorized } = await requireUser()
+  if (unauthorized) return unauthorized
+
   try {
     const { recipeTitle, recipeSummary, customRequest } = await req.json() as {
       recipeTitle: string

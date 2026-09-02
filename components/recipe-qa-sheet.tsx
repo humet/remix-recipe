@@ -5,6 +5,8 @@ import { useChat } from '@ai-sdk/react'
 import { DefaultChatTransport, lastAssistantMessageIsCompleteWithApprovalResponses } from 'ai'
 import { X, MessageCircle, Send, Loader2, AlertCircle, Sparkles, Check, RotateCcw } from 'lucide-react'
 import { ImprovedRecipe } from '@/lib/recipe-types'
+import { useDemoMode } from '@/components/providers'
+import Link from 'next/link'
 
 interface RecipeQASheetProps {
   isOpen: boolean
@@ -22,6 +24,7 @@ const SUGGESTED_QUESTIONS = [
 ]
 
 export function RecipeQASheet({ isOpen, onClose, recipeContext, recipe, onRecipeUpdate }: RecipeQASheetProps) {
+  const demo = useDemoMode()
   const [input, setInput] = useState('')
   const scrollRef = useRef<HTMLDivElement>(null)
   const [appliedToolCallIds] = useState(() => new Set<string>())
@@ -95,6 +98,61 @@ export function RecipeQASheet({ isOpen, onClose, recipeContext, recipe, onRecipe
   }
 
   if (!isOpen) return null
+
+  // The Q&A sheet streams from /api/ask-recipe with a tool-approval loop.
+  // Demo mode has no server identity and spends no tokens, so it gets an
+  // honest sign-in prompt rather than a faked conversation.
+  if (demo) {
+    return (
+      <>
+        <div
+          className="fixed inset-0 z-40 bg-background/60 backdrop-blur-sm"
+          onClick={onClose}
+        />
+        <div className="fixed inset-x-0 bottom-0 z-50 animate-slide-up">
+          <div className="glass-strong rounded-t-3xl overflow-hidden flex flex-col">
+            <div className="flex justify-center pt-3 pb-1">
+              <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
+            </div>
+            <div className="flex items-center justify-between px-5 py-3 border-b border-border/30">
+              <div className="flex items-center gap-2">
+                <MessageCircle className="h-5 w-5 text-primary" />
+                <h2 className="text-lg font-semibold text-foreground">Ask About This Recipe</h2>
+              </div>
+              <button
+                onClick={onClose}
+                className="h-9 w-9 flex items-center justify-center rounded-full glass text-muted-foreground hover:text-foreground transition-colors"
+                aria-label="Close"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="p-5 pb-8 flex flex-col items-center gap-4 text-center">
+              <div className="h-12 w-12 flex items-center justify-center rounded-2xl bg-primary/10">
+                <Sparkles className="h-6 w-6 text-primary" />
+              </div>
+              <div className="flex flex-col gap-1">
+                <p className="text-sm font-semibold text-foreground">
+                  Live Q&amp;A needs an account
+                </p>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Everything else in the demo runs on sample data. Asking follow-up
+                  questions talks to the model in real time, so it’s the one thing
+                  behind the login.
+                </p>
+              </div>
+              <Link
+                href="/login"
+                className="w-full h-12 rounded-2xl font-semibold bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-lg shadow-primary/25 flex items-center justify-center transition-all hover:opacity-90 active:scale-[0.98]"
+              >
+                Sign in
+              </Link>
+            </div>
+          </div>
+        </div>
+      </>
+    )
+  }
 
   return (
     <>
