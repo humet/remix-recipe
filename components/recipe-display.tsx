@@ -11,7 +11,8 @@ import { RecipeQASheet } from '@/components/recipe-qa-sheet'
 import { TimerBar } from '@/components/timer-bar'
 import { useTimers } from '@/hooks/use-timers'
 import { usePush } from '@/components/providers'
-import { createClient } from '@/lib/supabase/client'
+import { createRecipe, updateRecipe } from '@/lib/data'
+import { aiFetch } from '@/lib/ai/fetch'
 import { emitDataChange } from '@/lib/events'
 import { getCached, setCache, cacheKey, invalidateCache } from '@/lib/request-cache'
 import { 
@@ -132,13 +133,9 @@ export function RecipeDisplay({ recipe: initialRecipe, onHome, homeHref, savedRe
 
     setIsScaling(true)
     try {
-      const response = await fetch('/api/scale-recipe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          recipe: initialRecipe,
-          newServings: `${targetServings} servings`,
-        }),
+      const response = await aiFetch('/api/scale-recipe', {
+        recipe: initialRecipe,
+        newServings: `${targetServings} servings`,
       })
 
       if (!response.ok) throw new Error('Failed to scale')
@@ -200,40 +197,21 @@ export function RecipeDisplay({ recipe: initialRecipe, onHome, homeHref, savedRe
   const handleSave = async (saveAsNew = false) => {
     setIsSaving(true)
     setShowSavePrompt(false)
-    const supabase = createClient()
-    
+
+    const input = {
+      title: recipe.title,
+      recipe_data: recipe,
+      original_input: originalInput,
+      original_analysis: originalAnalysis,
+    }
+
     try {
       if (currentSavedId && !saveAsNew) {
-        // Update existing
-        const { error } = await supabase
-          .from('saved_recipes')
-          .update({
-            title: recipe.title,
-            recipe_data: recipe,
-            original_input: originalInput,
-            original_analysis: originalAnalysis,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', currentSavedId)
-        if (error) throw error
+        await updateRecipe(currentSavedId, input)
       } else {
-        // Insert new
-        const { data, error } = await supabase
-          .from('saved_recipes')
-          .insert({
-            title: recipe.title,
-            recipe_data: recipe,
-            original_input: originalInput,
-            original_analysis: originalAnalysis
-          })
-          .select('id')
-          .single()
-        if (error) throw error
-
-        if (data) {
-          setCurrentSavedId(data.id)
-          onSaved?.(data.id)
-        }
+        const id = await createRecipe(input)
+        setCurrentSavedId(id)
+        onSaved?.(id)
       }
       setIsSaved(true)
       setJustSaved(true)
@@ -289,14 +267,10 @@ export function RecipeDisplay({ recipe: initialRecipe, onHome, homeHref, savedRe
     }
 
     try {
-      const response = await fetch('/api/apply-swap', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          recipe,
-          originalIngredient: { name: original.name, amount: original.amount },
-          newIngredient: replacement,
-        }),
+      const response = await aiFetch('/api/apply-swap', {
+        recipe,
+        originalIngredient: { name: original.name, amount: original.amount },
+        newIngredient: replacement,
       })
 
       if (!response.ok) throw new Error('Failed to apply swap')
@@ -342,13 +316,9 @@ export function RecipeDisplay({ recipe: initialRecipe, onHome, homeHref, savedRe
     }
 
     try {
-      const response = await fetch('/api/remove-ingredient', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          recipe,
-          ingredientToRemove: { name: ingredient.name, amount: ingredient.amount },
-        }),
+      const response = await aiFetch('/api/remove-ingredient', {
+        recipe,
+        ingredientToRemove: { name: ingredient.name, amount: ingredient.amount },
       })
 
       if (!response.ok) throw new Error('Failed to remove ingredient')

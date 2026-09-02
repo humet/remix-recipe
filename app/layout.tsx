@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import { Providers } from '@/components/providers'
+import { isDemoRequest } from '@/lib/demo/is-demo'
 import './globals.css'
 
 const inter = Inter({ 
@@ -26,16 +27,18 @@ export const viewport: Viewport = {
   themeColor: '#6366f1',
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  const demo = await isDemoRequest()
+
   return (
     <html lang="en" className="bg-background">
       <body className={`${inter.variable} font-sans antialiased`}>
         <div className="gradient-bg" aria-hidden="true" />
-        <Providers>{children}</Providers>
+        <Providers demo={demo}>{children}</Providers>
       </body>
     </html>
   )

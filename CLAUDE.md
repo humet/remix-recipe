@@ -6,6 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 AI-powered recipe app ("Remix - Recipe Remixer") built with Next.js 16 and React 19. Users input recipes via text or images, get AI-suggested improvements, then can scale, swap/remove ingredients, and set cooking timers. Recipes can be saved to Supabase.
 
+The app is **single-user and behind a login**, with an opt-in **demo mode** that runs entirely on fixtures.
+
 ## Commands
 
 ```bash
@@ -28,7 +30,7 @@ The app is a single-page client component with three states:
 
 ### API Routes (`app/api/`)
 
-All routes use Vercel AI SDK's `generateText` with **Google Gemini 3 Flash** (`google/gemini-3-flash`) and Zod schemas for structured output:
+AI routes use Vercel AI SDK's `generateText` with **Google Gemini 3 Flash** (`google/gemini-3-flash`) and Zod schemas for structured output:
 
 - **`/api/analyze-recipe`** — Parse recipe from text/images, suggest 4-6 improvements
 - **`/api/improve-recipe`** — Apply selected improvements, return formatted recipe
@@ -36,20 +38,40 @@ All routes use Vercel AI SDK's `generateText` with **Google Gemini 3 Flash** (`g
 - **`/api/swap-ingredient`** — Get alternative ingredients for a given ingredient
 - **`/api/apply-swap`** — Apply an ingredient substitution throughout the recipe
 - **`/api/remove-ingredient`** — Adapt recipe to work without an ingredient
+- **`/api/ask-recipe`** — Streaming recipe Q&A (`streamText` + tool approval, `runtime = 'edge'`)
+- **`/api/validate-request`** — Cheap gate on custom improvement requests; fails open
+
+Non-AI routes: **`/api/timer-push/{schedule,cancel,send}`** for QStash-scheduled web-push timer alerts.
+
+**Every route above requires a session** via `requireUser()` from `lib/auth/require-user.ts` — except `timer-push/send`, which QStash calls server-to-server and which verifies its own signature. Do not add the guard there.
+
+### Auth and demo mode
+
+- **Gate:** `proxy.ts` at the repo root (Next.js 16's middleware convention — `export async function proxy()`). It refreshes the Supabase session via `updateSession()` from `lib/supabase/proxy.ts`, then passes authed users through, lets demo-cookie holders through, and redirects everyone else to `/login` (API routes get a 401). Redirects inherit the refreshed cookies — see `inheritCookies()`; skipping that causes a refresh loop.
+- **Auth:** Supabase email/password. One user, created by hand in the dashboard. No sign-up route.
+- **Demo mode:** the `remix_demo` cookie. Same routes, no page duplication. Read server-side by `isDemoRequest()` (`lib/demo/is-demo.ts`) in `app/layout.tsx`, passed into `Providers`, and exposed as `useDemoMode()`. `lib/demo/mode.ts` mirrors it for non-React callers and is `typeof window`-guarded so it can never leak across server requests.
+- **Demo data:** `lib/demo/fixtures/recipes.ts` seeded into a localStorage store (`lib/demo/store.ts`). **Demo never touches Supabase or the AI Gateway.**
+- **Demo AI:** `aiFetch()` (`lib/ai/fetch.ts`) is the single seam. It returns a `Response` so each call site keeps its own error handling, and in demo resolves fixtures from `lib/demo/fixtures/ai.ts`. Never monkeypatch `window.fetch` here — it would also intercept the Supabase client and the service worker.
+- Recipe Q&A (`components/recipe-qa-sheet.tsx`) is the one feature disabled in demo; faking the streaming tool-approval transport isn't worth it.
 
 ### Data Layer
 
-- **Supabase** (PostgreSQL) with a single `saved_recipes` table storing JSONB recipe data
-- Client setup: `lib/supabase/client.ts` (browser), `lib/supabase/server.ts` (SSR), `lib/supabase/proxy.ts` (middleware)
-- RLS policies exist but auth is not enforced at the application level
-- Database schema in `scripts/setup-saved-recipes.sql`
+- **Supabase** (PostgreSQL): `saved_recipes` (JSONB recipe data), `meal_plan_entries`, `push_timers`
+- **All app data access goes through `lib/data/`** — `index.ts` is the facade that dispatches per call to `supabase-backend.ts` or `demo-backend.ts`. Only `lib/data/*` should import `lib/supabase/client`. Server components use `lib/data/server.ts`.
+- Client setup: `lib/supabase/client.ts` (browser), `lib/supabase/server.ts` (SSR), `lib/supabase/proxy.ts` (used by root `proxy.ts`)
+- RLS is deliberately permissive; protection is the edge gate plus the per-route session check. `scripts/005_document_actual_schema.sql` records the real schema and the multi-user upgrade path.
+- Migrations: `scripts/00{1..5}_*.sql`, run in order
+- Cross-component refresh is a window-event bus (`lib/events.ts`), not SWR — writes must `emitDataChange('recipes-changed' | 'meal-plan-changed')`
 
 ### Key Directories
 
 - `components/` — React components (all `'use client'`)
 - `components/ui/` — shadcn/ui component library (New York style, Radix-based)
 - `hooks/` — `use-timers.ts` (multi-timer with Web Audio API, wake lock, notifications), `use-mobile.ts`
-- `lib/recipe-types.ts` — Core TypeScript interfaces (`ImprovedRecipe`, `RecipeAnalysis`, `Ingredient`, `RecipeStep`)
+- `lib/recipe-types.ts` — Core TypeScript interfaces (`ImprovedRecipe`, `RecipeAnalysis`, `Ingredient`, `RecipeStep`, `MealPlanEntry`)
+- `lib/data/` — Repository layer (facade + Supabase/demo backends)
+- `lib/demo/` — Demo flag, localStorage store, and fixtures
+- `lib/auth/require-user.ts` — Server-side session guard for route handlers
 - `lib/hooks/use-toast.ts` — Toast notification system
 
 ### Type System
@@ -74,7 +96,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=
 AI_GATEWAY_API_KEY=
 ```
 
-AI model requests (`google/gemini-3-flash`) are routed through the Vercel AI Gateway.
+AI model requests (`google/gemini-3-flash`) are routed through the Vercel AI Gateway. Auth needs no additional variables beyond the two Supabase ones.
 
 ## Conventions
 
@@ -82,3 +104,5 @@ AI model requests (`google/gemini-3-flash`) are routed through the Vercel AI Gat
 - TypeScript strict mode enabled; `ignoreBuildErrors: true` in next.config.mjs
 - Images are unoptimized in Next.js config (static export compatibility)
 - Vercel Analytics is currently disabled due to a runtime error
+- `public/sw.js` must never cache navigations, or a cached HTML shell bypasses the auth gate. Bump `CACHE_NAME` when changing its caching behaviour.
+- `ignoreBuildErrors` means `pnpm build` won't catch type errors — run `pnpm exec tsc --noEmit`

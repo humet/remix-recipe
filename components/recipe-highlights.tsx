@@ -2,28 +2,16 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/client'
-import { SavedRecipe } from '@/lib/recipe-types'
+import { listRecipes, setFavorite, type RecipeListRow } from '@/lib/data'
 import { Clock, ChefHat, Heart, Loader2, ChevronRight } from 'lucide-react'
-import { useDataChangeListener } from '@/lib/events'
+import { emitDataChange, useDataChangeListener } from '@/lib/events'
 
 export function RecipeHighlights() {
-  const [recipes, setRecipes] = useState<SavedRecipe[]>([])
+  const [recipes, setRecipes] = useState<RecipeListRow[]>([])
   const [loading, setLoading] = useState(true)
 
   const fetchRecipes = async () => {
-    const supabase = createClient()
-    const { data, error } = await supabase
-      .from('saved_recipes')
-      .select('id, title, recipe_data, created_at, is_favorite, last_opened_at')
-      .order('created_at', { ascending: false })
-
-    if (error) {
-      console.error('Error fetching recipes:', error)
-    }
-    if (data) {
-      setRecipes(data)
-    }
+    setRecipes(await listRecipes())
     setLoading(false)
   }
 
@@ -33,13 +21,13 @@ export function RecipeHighlights() {
 
   useDataChangeListener('recipes-changed', fetchRecipes)
 
-  const toggleFavorite = async (e: React.MouseEvent, recipe: SavedRecipe) => {
+  const toggleFavorite = async (e: React.MouseEvent, recipe: RecipeListRow) => {
     e.preventDefault()
     e.stopPropagation()
     const newVal = !recipe.is_favorite
     setRecipes(prev => prev.map(r => r.id === recipe.id ? { ...r, is_favorite: newVal } : r))
-    const supabase = createClient()
-    await supabase.from('saved_recipes').update({ is_favorite: newVal }).eq('id', recipe.id)
+    await setFavorite(recipe.id, newVal)
+    emitDataChange('recipes-changed')
   }
 
   if (loading) {
@@ -131,8 +119,8 @@ function CompactCard({
   recipe,
   onToggleFavorite,
 }: {
-  recipe: SavedRecipe
-  onToggleFavorite: (e: React.MouseEvent, recipe: SavedRecipe) => void
+  recipe: RecipeListRow
+  onToggleFavorite: (e: React.MouseEvent, recipe: RecipeListRow) => void
 }) {
   const data = recipe.recipe_data
   return (

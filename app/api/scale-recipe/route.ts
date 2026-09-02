@@ -1,5 +1,6 @@
 import { generateText, Output } from 'ai'
 import { z } from 'zod'
+import { requireUser } from '@/lib/auth/require-user'
 
 const scaledRecipeSchema = z.object({
   servings: z.string().describe('The new serving size'),
@@ -18,6 +19,9 @@ const scaledRecipeSchema = z.object({
 })
 
 export async function POST(req: Request) {
+  const { response: unauthorized } = await requireUser()
+  if (unauthorized) return unauthorized
+
   try {
     const { recipe, newServings } = await req.json()
 

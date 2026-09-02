@@ -1,5 +1,6 @@
 import { generateText, Output } from 'ai'
 import { z } from 'zod'
+import { requireUser } from '@/lib/auth/require-user'
 
 const updatedRecipeSchema = z.object({
   ingredients: z.array(z.object({
@@ -17,6 +18,9 @@ const updatedRecipeSchema = z.object({
 })
 
 export async function POST(req: Request) {
+  const { response: unauthorized } = await requireUser()
+  if (unauthorized) return unauthorized
+
   try {
     const { recipe, ingredientToRemove } = await req.json()
 

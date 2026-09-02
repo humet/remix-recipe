@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { RecipeAnalysis, SuggestedImprovement } from '@/lib/recipe-types'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
+import { aiFetch } from '@/lib/ai/fetch'
 import { 
   ArrowLeft, 
   ChefHat, 
@@ -103,14 +104,10 @@ export function ImprovementSuggestions({
     setValidationError(null)
 
     try {
-      const res = await fetch('/api/validate-request', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          recipeTitle: analysis.title,
-          recipeSummary: analysis.summary,
-          customRequest: trimmed,
-        }),
+      const res = await aiFetch('/api/validate-request', {
+        recipeTitle: analysis.title,
+        recipeSummary: analysis.summary,
+        customRequest: trimmed,
       })
 
       if (!res.ok) {

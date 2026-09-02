@@ -1,10 +1,14 @@
 import { NextResponse } from 'next/server'
 import { Client } from '@upstash/qstash'
 import { createClient } from '@/lib/supabase/server'
+import { requireUser } from '@/lib/auth/require-user'
 
 const qstash = new Client({ token: process.env.QSTASH_TOKEN! })
 
 export async function POST(request: Request) {
+  const { response: unauthorized } = await requireUser()
+  if (unauthorized) return unauthorized
+
   try {
     const { timerId, label, fireAt, subscription } = await request.json()
 

@@ -1,5 +1,6 @@
 import { generateText, Output } from 'ai'
 import { z } from 'zod'
+import { requireUser } from '@/lib/auth/require-user'
 
 const improvedRecipeSchema = z.object({
   title: z.string().describe('The recipe title'),
@@ -34,6 +35,9 @@ const improvedRecipeSchema = z.object({
 })
 
 export async function POST(req: Request) {
+  const { response: unauthorized } = await requireUser()
+  if (unauthorized) return unauthorized
+
   try {
     const { parsedRecipe, selectedImprovements, customRequest, existingTags } = await req.json() as {
       parsedRecipe: string

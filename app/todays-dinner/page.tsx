@@ -1,26 +1,15 @@
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
-
-function formatDateKey(date: Date): string {
-  const y = date.getFullYear()
-  const m = String(date.getMonth() + 1).padStart(2, '0')
-  const d = String(date.getDate()).padStart(2, '0')
-  return `${y}-${m}-${d}`
-}
+import { getPlannedRecipeId } from '@/lib/data/server'
+import { isDemoRequest } from '@/lib/demo/is-demo'
+import { DemoTodaysDinner } from '@/components/demo/demo-todays-dinner'
+import { formatDateKey } from '@/lib/meal-plan-utils'
 
 export default async function TodaysDinnerPage() {
-  const supabase = await createClient()
-  const todayKey = formatDateKey(new Date())
-
-  const { data } = await supabase
-    .from('meal_plan_entries')
-    .select('recipe_id')
-    .eq('plan_date', todayKey)
-    .maybeSingle()
-
-  if (data?.recipe_id) {
-    redirect(`/recipe/${data.recipe_id}`)
-  } else {
-    redirect('/meal-plan')
+  if (await isDemoRequest()) {
+    return <DemoTodaysDinner />
   }
+
+  const recipeId = await getPlannedRecipeId(formatDateKey(new Date()))
+
+  redirect(recipeId ? `/recipe/${recipeId}` : '/meal-plan')
 }
