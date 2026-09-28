@@ -62,14 +62,40 @@ function cancelPush(timerId: string) {
   }).catch((err) => console.error('Failed to cancel push:', err))
 }
 
-export function useTimers(pushSubscription?: PushSubscription | null) {
+export interface TimerPersistence {
+  /** Hold off loading and saving until the caller knows which session it's in. */
+  enabled: boolean
+  load: () => Timer[]
+  save: (timers: Timer[]) => void
+}
+
+export function useTimers(pushSubscription?: PushSubscription | null, persistence?: TimerPersistence) {
   const [timers, setTimers] = useState<Timer[]>([])
+  const [loaded, setLoaded] = useState(!persistence)
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
   const audioContextRef = useRef<AudioContext | null>(null)
   const wakeLockRef = useRef<WakeLockSentinel | null>(null)
   const playAlertRef = useRef<(label: string) => void>(() => {})
 
   const hasRunningTimers = timers.some(t => t.isRunning && !t.isComplete)
+
+  // Restore after mount rather than in the initialiser, so a server-rendered
+  // caller hydrates cleanly. endsAt is wall-clock, so the first tick after
+  // this catches timers up — and completes any that finished while away.
+  const persistEnabled = persistence?.enabled ?? false
+  useEffect(() => {
+    if (!persistence || !persistEnabled || loaded) return
+    const restored = persistence.load()
+    if (restored.length > 0) setTimers(prev => [...restored, ...prev.filter(t => !restored.some(r => r.id === t.id))])
+    setLoaded(true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [persistEnabled, loaded])
+
+  // Saving waits for the load, or the initial [] would wipe what's stored.
+  useEffect(() => {
+    if (persistence && persistEnabled && loaded) persistence.save(timers)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [timers, persistEnabled, loaded])
 
   // Wake lock management
   useEffect(() => {
