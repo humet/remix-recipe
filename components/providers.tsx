@@ -4,6 +4,7 @@ import { createContext, useContext } from 'react'
 import { useServiceWorker, type PushState } from '@/components/sw-register'
 import { setDemoMode } from '@/lib/demo/mode'
 import { DemoBanner } from '@/components/demo-banner'
+import { useTrackInAppHistory } from '@/lib/navigation'
 
 const PushContext = createContext<PushState>({
   subscription: null,
@@ -34,6 +35,7 @@ export function Providers({
   setDemoMode(demo)
 
   const pushState = useServiceWorker()
+  useTrackInAppHistory()
 
   return (
     <DemoContext.Provider value={demo}>

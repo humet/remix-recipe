@@ -1,4 +1,5 @@
 import type { ImprovedRecipe, SavedRecipe } from '@/lib/recipe-types'
+import { LIBRARY_RECIPES } from './library'
 
 /**
  * Hand-authored sample recipes for demo mode. Ids are stable so deep links
@@ -335,6 +336,7 @@ export const DEMO_RECIPES: SavedRecipe[] = [
     is_favorite: false,
     last_opened_at: null,
   },
+  ...LIBRARY_RECIPES,
 ]
 
 export const DEMO_RECIPE_BY_ID = new Map(DEMO_RECIPES.map((r) => [r.id, r]))

@@ -142,6 +142,7 @@ export function RecipePageClient({
       <RecipeDisplay
         recipe={recipe}
         homeHref="/"
+        backFallbackHref="/recipes"
         savedRecipeId={currentSavedId}
         onSaved={(id) => setCurrentSavedId(id)}
         originalInput={originalInput}

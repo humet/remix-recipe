@@ -1,8 +1,23 @@
 import { useMemo, useState } from 'react'
-import { SavedRecipe } from '@/lib/recipe-types'
+import {
+  buildIndex,
+  searchRecipes,
+  type SearchableRecipe,
+  type SearchResult,
+} from '@/lib/search/recipe-search'
 
-interface UseRecipeFilterOptions {
-  recipes: SavedRecipe[]
+interface UseRecipeFilterOptions<T extends SearchableRecipe> {
+  recipes: T[]
+  initialQuery?: string
+  initialTags?: string[]
+  initialFavouritesOnly?: boolean
+}
+
+export interface TagFacet {
+  tag: string
+  /** Recipes this tag would leave, given the query and the other filters. */
+  count: number
+  active: boolean
 }
 
 /** Canonical form for near-duplicate detection: lowercase, hyphens/underscores → spaces */
@@ -10,100 +25,107 @@ function canonicalize(s: string) {
   return s.toLowerCase().replace(/[-_]/g, ' ').replace(/\s+/g, ' ').trim()
 }
 
-export function useRecipeFilter({ recipes }: UseRecipeFilterOptions) {
-  const [searchQuery, setSearchQuery] = useState('')
-  const [activeFilters, setActiveFilters] = useState<string[]>([])
+export function useRecipeFilter<T extends SearchableRecipe>({
+  recipes,
+  initialQuery = '',
+  initialTags = [],
+  initialFavouritesOnly = false,
+}: UseRecipeFilterOptions<T>) {
+  const [searchQuery, setSearchQuery] = useState(initialQuery)
+  const [activeFilters, setActiveFilters] = useState<string[]>(initialTags)
+  const [favouritesOnly, setFavouritesOnly] = useState(initialFavouritesOnly)
 
-  // Build canonical → { bestSpelling, count } map, then return sorted unique tags
-  const { allTags, tagCounts } = useMemo(() => {
-    const canonicalMap = new Map<string, { spelling: string; count: number }>()
+  const index = useMemo(() => buildIndex(recipes), [recipes])
 
+  // Canonical tag → the spelling used most often, in library-wide frequency order.
+  // The order is stable so chips don't jump around as results change.
+  const tagOrder = useMemo(() => {
+    const byKey = new Map<string, { spelling: string; count: number }>()
     for (const r of recipes) {
       for (const tag of r.recipe_data.tags ?? []) {
         const key = canonicalize(tag)
-        const existing = canonicalMap.get(key)
-        if (existing) {
-          existing.count++
-          // Keep whichever spelling appears more often (first one wins ties)
-        } else {
-          canonicalMap.set(key, { spelling: tag, count: 1 })
-        }
+        const existing = byKey.get(key)
+        if (existing) existing.count++
+        else byKey.set(key, { spelling: tag, count: 1 })
       }
     }
-
-    // Sort by frequency (most used first)
-    const sorted = Array.from(canonicalMap.values())
-      .sort((a, b) => b.count - a.count)
-
-    const tags = sorted.map(e => e.spelling)
-    const counts = new Map<string, number>()
-    for (const e of sorted) {
-      counts.set(e.spelling, e.count)
-    }
-
-    return { allTags: tags, tagCounts: counts }
+    return Array.from(byKey.entries())
+      .sort((a, b) => b[1].count - a[1].count)
+      .map(([key, v]) => ({ key, spelling: v.spelling }))
   }, [recipes])
 
-  // Map active filters through canonicalization so near-duplicate tags match recipes
-  const filteredRecipes = useMemo(() => {
-    let result = recipes
+  const outcome = useMemo(() => searchRecipes(index, searchQuery), [index, searchQuery])
 
-    // Search filter
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase()
-      result = result.filter(r => {
-        const title = r.title.toLowerCase()
-        const description = (r.recipe_data.description ?? '').toLowerCase()
-        const tags = (r.recipe_data.tags ?? []).map(t => t.toLowerCase())
-        return title.includes(q) || description.includes(q) || tags.some(t => t.includes(q))
-      })
+  const { results, tagFacets, favouriteCount } = useMemo(() => {
+    const activeKeys = activeFilters.map(canonicalize)
+    const keysOf = (r: SearchResult<T>) => new Set((r.recipe.recipe_data.tags ?? []).map(canonicalize))
+
+    // Tags narrow (AND); favourites narrows too.
+    const passes = (r: SearchResult<T>, skipFavourites = false) => {
+      if (!skipFavourites && favouritesOnly && !r.recipe.is_favorite) return false
+      const keys = keysOf(r)
+      return activeKeys.every((k) => keys.has(k))
     }
 
-    // Tag filter (AND logic) — match by canonical form so near-duplicates work
-    if (activeFilters.length > 0) {
-      const activeCanonical = activeFilters.map(canonicalize)
-      result = result.filter(r => {
-        const recipeTags = (r.recipe_data.tags ?? []).map(canonicalize)
-        return activeCanonical.every(f => recipeTags.includes(f))
-      })
-    }
+    const filtered = outcome.results.filter((r) => passes(r))
 
-    // Sort: favorites first → last_opened_at DESC → created_at DESC
-    result = [...result].sort((a, b) => {
-      const aFav = a.is_favorite ? 1 : 0
-      const bFav = b.is_favorite ? 1 : 0
-      if (bFav !== aFav) return bFav - aFav
+    // Counts are "what you'd get if you tapped this", so they never lead to zero.
+    const counts = new Map<string, number>()
+    for (const r of filtered) for (const k of keysOf(r)) counts.set(k, (counts.get(k) ?? 0) + 1)
 
-      const aOpened = a.last_opened_at ? new Date(a.last_opened_at).getTime() : 0
-      const bOpened = b.last_opened_at ? new Date(b.last_opened_at).getTime() : 0
-      if (bOpened !== aOpened) return bOpened - aOpened
+    const facets: TagFacet[] = tagOrder
+      .map(({ key, spelling }) => ({
+        tag: spelling,
+        count: counts.get(key) ?? 0,
+        active: activeKeys.includes(key),
+      }))
+      .filter((f) => f.active || f.count > 0)
+      // Applied filters lead the row so they're never scrolled out of sight.
+      .sort((a, b) => Number(b.active) - Number(a.active))
 
-      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-    })
+    const favourites = outcome.results.filter((r) => passes(r, true) && r.recipe.is_favorite).length
 
-    return result
-  }, [recipes, searchQuery, activeFilters])
+    return { results: filtered, tagFacets: facets, favouriteCount: favourites }
+  }, [outcome, activeFilters, favouritesOnly, tagOrder])
 
   const toggleFilter = (tag: string) => {
-    setActiveFilters(prev =>
-      prev.includes(tag) ? prev.filter(f => f !== tag) : [...prev, tag]
+    const key = canonicalize(tag)
+    setActiveFilters((prev) =>
+      prev.some((f) => canonicalize(f) === key)
+        ? prev.filter((f) => canonicalize(f) !== key)
+        : [...prev, tag],
     )
   }
 
   const clearFilters = () => {
     setActiveFilters([])
+    setFavouritesOnly(false)
+  }
+
+  const clearAll = () => {
+    clearFilters()
     setSearchQuery('')
   }
 
   return {
     searchQuery,
     setSearchQuery,
+    isSearching: outcome.terms.length > 0,
     activeFilters,
-    toggleFilter,
-    clearFilters,
     setActiveFilters,
-    allTags,
-    tagCounts,
-    filteredRecipes,
+    toggleFilter,
+    favouritesOnly,
+    setFavouritesOnly,
+    hasFilters: activeFilters.length > 0 || favouritesOnly,
+    clearFilters,
+    clearAll,
+    tagFacets,
+    favouriteCount,
+    results,
+    /** Results before tag/favourite filters — to tell "filters hid it" from "nothing matched". */
+    unfilteredCount: outcome.results.length,
+    partial: outcome.partial,
+    unmatchedTerms: outcome.unmatchedTerms,
+    terms: outcome.terms,
   }
 }
