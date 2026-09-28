@@ -42,6 +42,8 @@ export function RecipeHighlights() {
     return null
   }
 
+  // listRecipes() is already ordered by created_at DESC
+  const recentlyAdded = recipes.slice(0, 4)
   const favorites = recipes.filter(r => r.is_favorite)
   const recents = recipes
     .filter(r => r.last_opened_at && !r.is_favorite)
@@ -50,11 +52,21 @@ export function RecipeHighlights() {
   const hasFavorites = favorites.length > 0
   const hasRecents = recents.length > 0
 
-  // If no favorites or recents, show most recent recipes
-  const fallbackRecipes = !hasFavorites && !hasRecents ? recipes.slice(0, 6) : []
-
   return (
     <div className="flex flex-col gap-5">
+      <Section title="Recently Added">
+        <HorizontalScroll>
+          {recentlyAdded.map(r => (
+            <CompactCard
+              key={r.id}
+              recipe={r}
+              onToggleFavorite={toggleFavorite}
+              meta={formatAdded(r.created_at)}
+            />
+          ))}
+        </HorizontalScroll>
+      </Section>
+
       {hasFavorites && (
         <Section title="Favorites">
           <HorizontalScroll>
@@ -69,16 +81,6 @@ export function RecipeHighlights() {
         <Section title="Recently Used">
           <HorizontalScroll>
             {recents.slice(0, 4).map(r => (
-              <CompactCard key={r.id} recipe={r} onToggleFavorite={toggleFavorite} />
-            ))}
-          </HorizontalScroll>
-        </Section>
-      )}
-
-      {fallbackRecipes.length > 0 && (
-        <Section title="Your Recipes">
-          <HorizontalScroll>
-            {fallbackRecipes.map(r => (
               <CompactCard key={r.id} recipe={r} onToggleFavorite={toggleFavorite} />
             ))}
           </HorizontalScroll>
@@ -118,9 +120,11 @@ function HorizontalScroll({ children }: { children: React.ReactNode }) {
 function CompactCard({
   recipe,
   onToggleFavorite,
+  meta,
 }: {
   recipe: RecipeListRow
   onToggleFavorite: (e: React.MouseEvent, recipe: RecipeListRow) => void
+  meta?: React.ReactNode
 }) {
   const data = recipe.recipe_data
   return (
@@ -152,6 +156,18 @@ function CompactCard({
           {data.difficulty}
         </span>
       </div>
+      {meta && <span className="text-[11px] text-muted-foreground/80">{meta}</span>}
     </Link>
   )
+}
+
+function formatAdded(dateStr: string) {
+  const date = new Date(dateStr)
+  const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
+  const days = Math.round((startOfDay(new Date()) - startOfDay(date)) / (24 * 60 * 60 * 1000))
+
+  if (days <= 0) return 'Added today'
+  if (days === 1) return 'Added yesterday'
+  if (days < 7) return `Added ${days}d ago`
+  return `Added ${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
 }
