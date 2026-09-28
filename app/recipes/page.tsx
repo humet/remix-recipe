@@ -5,28 +5,33 @@ import Link from 'next/link'
 import { deleteRecipe, listRecipes, setFavorite, type RecipeListRow } from '@/lib/data'
 import { useRecipeFilter } from '@/hooks/use-recipe-filter'
 import { emitDataChange, useDataChangeListener } from '@/lib/events'
-import { Badge } from '@/components/ui/badge'
-import { Input } from '@/components/ui/input'
-import { Clock, Users, ChefHat, Heart, Trash2, Loader2, Search, X, ArrowLeft } from 'lucide-react'
+import { SearchField } from '@/components/recipe-search/search-field'
+import { FilterChips } from '@/components/recipe-search/filter-chips'
+import { ResultRow } from '@/components/recipe-search/result-row'
+import { NoResults, SearchStatus } from '@/components/recipe-search/search-status'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import { Heart, Trash2, Loader2, ArrowLeft } from 'lucide-react'
 
-const MAX_VISIBLE_TAGS = 12
+const SCROLL_KEY = 'remix:recipes-scroll'
 
 export default function RecipesPage() {
   const [recipes, setRecipes] = useState<RecipeListRow[]>([])
   const [loading, setLoading] = useState(true)
   const [deletingId, setDeletingId] = useState<string | null>(null)
-  const [showAllTags, setShowAllTags] = useState(false)
+  const [pendingDelete, setPendingDelete] = useState<RecipeListRow | null>(null)
+  const [urlReady, setUrlReady] = useState(false)
 
-  const {
-    searchQuery,
-    setSearchQuery,
-    activeFilters,
-    toggleFilter,
-    setActiveFilters,
-    allTags,
-    tagCounts,
-    filteredRecipes,
-  } = useRecipeFilter({ recipes })
+  const search = useRecipeFilter({ recipes })
+  const { searchQuery, setSearchQuery, activeFilters, setActiveFilters, favouritesOnly, setFavouritesOnly } = search
 
   const fetchRecipes = async () => {
     setRecipes(await listRecipes())
@@ -39,18 +44,55 @@ export default function RecipesPage() {
 
   useDataChangeListener('recipes-changed', fetchRecipes)
 
-  const toggleFavorite = async (e: React.MouseEvent, recipe: RecipeListRow) => {
-    e.preventDefault()
-    e.stopPropagation()
+  // Search state lives in the URL, so Back from a recipe returns to the same results.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    setSearchQuery(params.get('q') ?? '')
+    setActiveFilters(params.get('tags')?.split(',').filter(Boolean) ?? [])
+    setFavouritesOnly(params.get('fav') === '1')
+    setUrlReady(true)
+  }, [])
+
+  useEffect(() => {
+    if (!urlReady) return
+    const params = new URLSearchParams()
+    if (searchQuery) params.set('q', searchQuery)
+    if (activeFilters.length) params.set('tags', activeFilters.join(','))
+    if (favouritesOnly) params.set('fav', '1')
+    const qs = params.toString()
+    window.history.replaceState(null, '', qs ? `?${qs}` : window.location.pathname)
+  }, [urlReady, searchQuery, activeFilters, favouritesOnly])
+
+  // Put the list back where it was once it has loaded.
+  useEffect(() => {
+    if (loading || !urlReady) return
+    try {
+      const saved = sessionStorage.getItem(SCROLL_KEY)
+      if (saved) {
+        sessionStorage.removeItem(SCROLL_KEY)
+        window.scrollTo(0, Number(saved))
+      }
+    } catch {
+      // Storage unavailable; start at the top.
+    }
+  }, [loading, urlReady])
+
+  const rememberScroll = () => {
+    try {
+      sessionStorage.setItem(SCROLL_KEY, String(window.scrollY))
+    } catch {
+      // Storage unavailable; nothing to restore later.
+    }
+  }
+
+  const toggleFavorite = async (recipe: RecipeListRow) => {
     const newVal = !recipe.is_favorite
     setRecipes(prev => prev.map(r => r.id === recipe.id ? { ...r, is_favorite: newVal } : r))
     await setFavorite(recipe.id, newVal)
     emitDataChange('recipes-changed')
   }
 
-  const handleDelete = async (e: React.MouseEvent, id: string) => {
-    e.preventDefault()
-    e.stopPropagation()
+  const handleDelete = async (id: string) => {
     setDeletingId(id)
     await deleteRecipe(id)
     setRecipes(prev => prev.filter(r => r.id !== id))
@@ -58,217 +100,130 @@ export default function RecipesPage() {
     emitDataChange('recipes-changed')
   }
 
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr)
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-  }
-
-  // Tags to display: active filters always shown, plus top tags up to limit
-  const isSearching = searchQuery.trim().length > 0
-  const hiddenTagCount = Math.max(0, allTags.length - MAX_VISIBLE_TAGS)
-  const visibleTags = showAllTags ? allTags : allTags.slice(0, MAX_VISIBLE_TAGS)
-  // Ensure active filters are always visible even if beyond the limit
-  const extraActiveTags = activeFilters.filter(f => !visibleTags.includes(f))
-  const displayTags = [...visibleTags, ...extraActiveTags]
-
   return (
     <main className="min-h-screen bg-background">
-      {/* Sticky header with back arrow, title, and search */}
+      <h1 className="sr-only">All recipes</h1>
+
       <div className="sticky top-0 z-20 bg-background/80 backdrop-blur-xl border-b border-border/50">
-        <div className="px-5 pt-5 pb-3">
-          <div className="flex items-center gap-3 mb-3">
-            <Link
-              href="/"
-              className="h-10 w-10 flex items-center justify-center rounded-xl glass shrink-0"
-              aria-label="Back to home"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Link>
-            <h1 className="text-xl font-bold text-foreground">All Recipes</h1>
-          </div>
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-            <Input
-              placeholder="Search recipes..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-12 pr-12 h-12 text-base glass border-none rounded-xl"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="absolute right-2 top-1/2 -translate-y-1/2 h-10 w-10 flex items-center justify-center rounded-full text-muted-foreground hover:text-foreground"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            )}
-          </div>
+        <div className="flex items-center gap-2 px-5 pt-4 pb-2">
+          <Link
+            href="/"
+            className="h-12 w-12 flex items-center justify-center rounded-xl glass shrink-0"
+            aria-label="Back to home"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Link>
+          <SearchField value={searchQuery} onChange={setSearchQuery} />
         </div>
+        <FilterChips
+          className="pb-3"
+          facets={search.tagFacets}
+          onToggleTag={search.toggleFilter}
+          favouritesOnly={favouritesOnly}
+          favouriteCount={search.favouriteCount}
+          onToggleFavourites={() => setFavouritesOnly(v => !v)}
+          hasFilters={search.hasFilters}
+          onClear={search.clearFilters}
+        />
       </div>
 
-      {/* Tags section — hidden when searching, unless active filters exist */}
-      {allTags.length > 0 && (
-        <div className="px-5 pt-3 pb-1">
-          {isSearching && activeFilters.length > 0 ? (
-            // Compact inline summary when searching with active filters
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs text-muted-foreground">Filtering:</span>
-              {activeFilters.map(tag => (
-                <Badge
-                  key={tag}
-                  variant="default"
-                  className="cursor-pointer select-none py-1 px-2.5 text-xs"
-                  onClick={() => toggleFilter(tag)}
-                >
-                  {tag}
-                  <X className="h-3 w-3 ml-1" />
-                </Badge>
-              ))}
-              <button
-                onClick={() => setActiveFilters([])}
-                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Clear all
-              </button>
-            </div>
-          ) : !isSearching ? (
-            // Full tag pills when not searching
-            <div className="flex flex-wrap gap-2 items-center">
-              {displayTags.map(tag => (
-                <Badge
-                  key={tag}
-                  variant={activeFilters.includes(tag) ? 'default' : 'outline'}
-                  className="cursor-pointer select-none py-1.5 px-3 text-xs"
-                  onClick={() => toggleFilter(tag)}
-                >
-                  {tag}
-                  {tagCounts.get(tag) != null && (
-                    <span className="ml-1 opacity-60">{tagCounts.get(tag)}</span>
-                  )}
-                </Badge>
-              ))}
-              {!showAllTags && hiddenTagCount > 0 && (
-                <button
-                  onClick={() => setShowAllTags(true)}
-                  className="text-xs text-muted-foreground hover:text-foreground transition-colors py-1.5 px-2"
-                >
-                  +{hiddenTagCount} more
-                </button>
-              )}
-              {showAllTags && hiddenTagCount > 0 && (
-                <button
-                  onClick={() => setShowAllTags(false)}
-                  className="text-xs text-muted-foreground hover:text-foreground transition-colors py-1.5 px-2"
-                >
-                  Show less
-                </button>
-              )}
-              {activeFilters.length > 0 && (
-                <button
-                  onClick={() => setActiveFilters([])}
-                  className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors py-1.5 px-2"
-                >
-                  <X className="h-3.5 w-3.5" />
-                  Clear
-                </button>
-              )}
-            </div>
-          ) : null}
-        </div>
-      )}
-
-      {/* Recipe list */}
-      <div className="px-5 pb-8">
+      <div className="px-5 pt-3 pb-8">
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
-        ) : filteredRecipes.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-8">
-            {recipes.length === 0 ? 'No saved recipes yet.' : 'No recipes match your search.'}
-          </p>
-        ) : (
-          <div className="flex flex-col gap-3 mt-3">
-            {filteredRecipes.map((saved) => {
-              const recipe = saved.recipe_data
-              return (
-                <Link
-                  key={saved.id}
-                  href={`/recipe/${saved.id}`}
-                  className="block w-full text-left glass rounded-2xl p-4 hover:ring-2 hover:ring-primary/30 transition-all active:scale-[0.98] cursor-pointer"
-                >
-                  <div className="flex justify-between items-start gap-3">
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-foreground truncate">{saved.title}</h3>
-                      <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
-                        {recipe.description}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-0.5 shrink-0 -mr-1">
-                      <button
-                        onClick={(e) => toggleFavorite(e, saved)}
-                        className="h-11 w-11 flex items-center justify-center rounded-full transition-colors"
-                        aria-label={saved.is_favorite ? 'Remove from favorites' : 'Add to favorites'}
-                      >
-                        <Heart
-                          className={`h-5 w-5 ${saved.is_favorite ? 'fill-red-500 text-red-500' : 'text-muted-foreground'}`}
-                        />
-                      </button>
-                      <button
-                        onClick={(e) => handleDelete(e, saved.id)}
-                        disabled={deletingId === saved.id}
-                        className="h-11 w-11 flex items-center justify-center rounded-full text-muted-foreground hover:text-destructive transition-colors"
-                        aria-label="Delete recipe"
-                      >
-                        {deletingId === saved.id ? (
-                          <Loader2 className="h-5 w-5 animate-spin" />
-                        ) : (
-                          <Trash2 className="h-5 w-5" />
-                        )}
-                      </button>
-                    </div>
-                  </div>
-
-                  {(recipe.tags ?? []).length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 mt-2">
-                      {(recipe.tags ?? []).map(tag => (
-                        <Badge
-                          key={tag}
-                          variant="secondary"
-                          className="text-[10px] px-1.5 py-0 cursor-pointer"
-                          onClick={(e) => {
-                            e.preventDefault()
-                            e.stopPropagation()
-                            toggleFilter(tag)
-                          }}
-                        >
-                          {tag}
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-
-                  <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <Clock className="h-3.5 w-3.5" />
-                      <span>{recipe.totalTime}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Users className="h-3.5 w-3.5" />
-                      <span>{recipe.servings}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <ChefHat className="h-3.5 w-3.5" />
-                      <span>{recipe.difficulty}</span>
-                    </div>
-                    <span className="ml-auto">{formatDate(saved.created_at)}</span>
-                  </div>
-                </Link>
-              )
-            })}
+        ) : recipes.length === 0 ? (
+          <div className="text-center py-12 px-6">
+            <p className="font-medium text-foreground">No saved recipes yet</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              Remix a recipe and save it, and it’ll show up here.
+            </p>
+            <Link href="/" className="inline-block mt-4 text-sm font-medium text-primary">
+              Remix your first recipe
+            </Link>
           </div>
+        ) : search.results.length === 0 ? (
+          <NoResults
+            query={searchQuery}
+            hiddenByFilters={search.hasFilters ? search.unfilteredCount : 0}
+            onClearFilters={search.clearFilters}
+            onClearSearch={() => setSearchQuery('')}
+          />
+        ) : (
+          <>
+            <SearchStatus
+              total={search.results.length}
+              isSearching={search.isSearching}
+              hasFilters={search.hasFilters}
+              partial={search.partial}
+              unmatchedTerms={search.unmatchedTerms}
+            />
+            <ul className="flex flex-col gap-3 mt-2">
+              {search.results.map((result) => {
+                const saved = result.recipe
+                return (
+                  <li key={saved.id}>
+                    <ResultRow
+                      result={result}
+                      href={`/recipe/${saved.id}`}
+                      onNavigate={rememberScroll}
+                      actions={
+                        <>
+                          <button
+                            onClick={() => toggleFavorite(saved)}
+                            className="h-11 w-11 flex items-center justify-center rounded-full transition-colors"
+                            aria-label={saved.is_favorite ? 'Remove from favourites' : 'Add to favourites'}
+                            aria-pressed={!!saved.is_favorite}
+                          >
+                            <Heart
+                              className={`h-5 w-5 ${saved.is_favorite ? 'fill-red-500 text-red-500' : 'text-muted-foreground'}`}
+                            />
+                          </button>
+                          <button
+                            onClick={() => setPendingDelete(saved)}
+                            disabled={deletingId === saved.id}
+                            className="h-11 w-11 flex items-center justify-center rounded-full text-muted-foreground hover:text-destructive transition-colors"
+                            aria-label={`Delete ${saved.title}`}
+                          >
+                            {deletingId === saved.id ? (
+                              <Loader2 className="h-5 w-5 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-5 w-5" />
+                            )}
+                          </button>
+                        </>
+                      }
+                    />
+                  </li>
+                )
+              })}
+            </ul>
+          </>
         )}
       </div>
+
+      <AlertDialog open={!!pendingDelete} onOpenChange={(open) => !open && setPendingDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this recipe?</AlertDialogTitle>
+            <AlertDialogDescription>
+              “{pendingDelete?.title}” will be removed from your recipes and your meal plan. This can’t be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="h-11">Keep it</AlertDialogCancel>
+            <AlertDialogAction
+              className="h-11 bg-destructive text-white hover:bg-destructive/90"
+              onClick={() => {
+                if (pendingDelete) handleDelete(pendingDelete.id)
+                setPendingDelete(null)
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </main>
   )
 }
