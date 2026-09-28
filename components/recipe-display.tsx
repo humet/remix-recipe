@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { ImprovedRecipe, Ingredient, RecipeAnalysis } from '@/lib/recipe-types'
 import { Button } from '@/components/ui/button'
@@ -15,6 +15,14 @@ import { createRecipe, updateRecipe } from '@/lib/data'
 import { aiFetch } from '@/lib/ai/fetch'
 import { emitDataChange } from '@/lib/events'
 import { getCached, setCache, cacheKey, invalidateCache } from '@/lib/request-cache'
+import {
+  type DisplaySnapshot,
+  clearCookSession,
+  readCookTimers,
+  recipeKey,
+  writeCookDisplay,
+  writeCookTimers,
+} from '@/lib/cook-session'
 import { 
   ArrowLeft, 
   Clock, 
@@ -53,11 +61,21 @@ interface RecipeDisplayProps {
   improveFurtherHref?: string
   onReimproveFromOriginal?: () => void
   isReimproved?: boolean
+  /** Cooking progress from a stored session; ignored unless it matches `recipe`. */
+  restoreSnapshot?: DisplaySnapshot
+  /** Write progress and timers to the stored session. */
+  persist?: boolean
 }
 
-export function RecipeDisplay({ recipe: initialRecipe, onHome, homeHref, savedRecipeId, onSaved, originalInput, originalAnalysis, onImproveFurther, improveFurtherHref, onReimproveFromOriginal, isReimproved }: RecipeDisplayProps) {
+export function RecipeDisplay({ recipe: initialRecipe, onHome, homeHref, savedRecipeId, onSaved, originalInput, originalAnalysis, onImproveFurther, improveFurtherHref, onReimproveFromOriginal, isReimproved, restoreSnapshot, persist = false }: RecipeDisplayProps) {
   const router = useRouter()
+  const baseKey = useMemo(() => recipeKey(initialRecipe), [initialRecipe])
+  // Read once at mount: the snapshot seeds state, it doesn't track it.
+  const [snapshot] = useState(() => (restoreSnapshot?.baseKey === baseKey ? restoreSnapshot : undefined))
+
   const navigateHome = () => {
+    // Leaving on purpose ends the session, so a relaunch starts at home.
+    clearCookSession()
     if (onHome) {
       onHome()
     } else if (homeHref) {
@@ -68,10 +86,12 @@ export function RecipeDisplay({ recipe: initialRecipe, onHome, homeHref, savedRe
   }
   const handleImproveFurther = onImproveFurther ?? (improveFurtherHref ? () => router.push(improveFurtherHref) : () => router.push('/'))
 
-  const [recipe, setRecipe] = useState(initialRecipe)
-  const [currentStep, setCurrentStep] = useState(0)
-  const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set())
-  const [view, setView] = useState<'overview' | 'cooking'>('overview')
+  const [recipe, setRecipe] = useState(snapshot?.recipe ?? initialRecipe)
+  const [currentStep, setCurrentStep] = useState(() =>
+    Math.min(snapshot?.currentStep ?? 0, Math.max(0, (snapshot?.recipe ?? initialRecipe).steps.length - 1))
+  )
+  const [completedSteps, setCompletedSteps] = useState<Set<number>>(() => new Set(snapshot?.completedSteps))
+  const [view, setView] = useState<'overview' | 'cooking'>(snapshot?.view ?? 'overview')
 
   // First-time timer hint
   const [timerHintSeen, setTimerHintSeen] = useState(true) // default true to avoid flash
@@ -85,7 +105,7 @@ export function RecipeDisplay({ recipe: initialRecipe, onHome, homeHref, savedRe
 
   // Portion scaling state
   const [isScaling, setIsScaling] = useState(false)
-  const [scalingNotes, setScalingNotes] = useState<string[] | null>(null)
+  const [scalingNotes, setScalingNotes] = useState<string[] | null>(snapshot?.scalingNotes ?? null)
   const [showScalingNotes, setShowScalingNotes] = useState(false)
   
   // Parse current servings number for the adjuster
@@ -94,8 +114,8 @@ export function RecipeDisplay({ recipe: initialRecipe, onHome, homeHref, savedRe
     return match ? parseInt(match[0], 10) : 4
   }
   
-  const [targetServings, setTargetServings] = useState(() => parseServings(recipe.servings))
-  const [currentScaledServings, setCurrentScaledServings] = useState(() => parseServings(recipe.servings))
+  const [targetServings, setTargetServings] = useState(() => snapshot?.targetServings ?? parseServings(recipe.servings))
+  const [currentScaledServings, setCurrentScaledServings] = useState(() => snapshot?.currentScaledServings ?? parseServings(recipe.servings))
   const originalServings = parseServings(initialRecipe.servings)
 
   const adjustServings = (delta: number) => {
@@ -165,13 +185,17 @@ export function RecipeDisplay({ recipe: initialRecipe, onHome, homeHref, savedRe
 
   // Push subscription & timer hook
   const { subscription: pushSubscription, isSupported: pushSupported, subscribe: subscribePush } = usePush()
-  const timerHook = useTimers(pushSubscription)
+  const timerHook = useTimers(pushSubscription, {
+    enabled: persist,
+    load: readCookTimers,
+    save: writeCookTimers,
+  })
 
   // Save state
-  const [isSaved, setIsSaved] = useState(!!savedRecipeId && !isReimproved)
+  const [isSaved, setIsSaved] = useState(snapshot?.isSaved ?? (!!savedRecipeId && !isReimproved))
   const [isSaving, setIsSaving] = useState(false)
   const [justSaved, setJustSaved] = useState(false)
-  const [currentSavedId, setCurrentSavedId] = useState<string | undefined>(savedRecipeId)
+  const [currentSavedId, setCurrentSavedId] = useState<string | undefined>(snapshot?.currentSavedId ?? savedRecipeId)
   const [showSavePrompt, setShowSavePrompt] = useState(false)
   const [showUnsavedPrompt, setShowUnsavedPrompt] = useState(false)
 
@@ -236,7 +260,25 @@ export function RecipeDisplay({ recipe: initialRecipe, onHome, homeHref, savedRe
   const [swapSheetOpen, setSwapSheetOpen] = useState(false)
   const [selectedIngredient, setSelectedIngredient] = useState<Ingredient | null>(null)
   const [isSwapping, setIsSwapping] = useState(false)
-  const [swapNotes, setSwapNotes] = useState<string[]>([])
+  const [swapNotes, setSwapNotes] = useState<string[]>(snapshot?.swapNotes ?? [])
+
+  // Mirror cooking progress into the stored session so a relaunch resumes it.
+  useEffect(() => {
+    if (!persist) return
+    writeCookDisplay({
+      baseKey,
+      recipe,
+      view,
+      currentStep,
+      completedSteps: [...completedSteps],
+      targetServings,
+      currentScaledServings,
+      scalingNotes,
+      swapNotes,
+      isSaved,
+      currentSavedId,
+    })
+  }, [persist, baseKey, recipe, view, currentStep, completedSteps, targetServings, currentScaledServings, scalingNotes, swapNotes, isSaved, currentSavedId])
 
   const getRecipeContext = () => {
     return `${recipe.title}\n\nIngredients:\n${recipe.ingredients.map(i => `- ${i.amount} ${i.name}`).join('\n')}\n\nSteps:\n${recipe.steps.map(s => `${s.stepNumber}. ${s.instruction}`).join('\n')}`
@@ -525,7 +567,12 @@ export function RecipeDisplay({ recipe: initialRecipe, onHome, homeHref, savedRe
             {currentStep === recipe.steps.length - 1 ? (
               <Button
                 size="lg"
-                onClick={() => setView('overview')}
+                onClick={() => {
+                  setView('overview')
+                  // Finished, saved, nothing still timing: nothing left to
+                  // resume. Unsaved work is kept so a relaunch doesn't lose it.
+                  if (timerHook.activeCount === 0 && currentSavedId && isSaved) clearCookSession()
+                }}
                 className="flex-1 h-14 rounded-2xl bg-gradient-to-r from-primary to-accent shadow-lg shadow-primary/25 hover:scale-[1.02] active:scale-[0.98] transition-transform"
               >
                 <Check className="h-5 w-5 mr-1" />

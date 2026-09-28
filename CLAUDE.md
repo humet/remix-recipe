@@ -54,6 +54,14 @@ Non-AI routes: **`/api/timer-push/{schedule,cancel,send}`** for QStash-scheduled
 - **Demo AI:** `aiFetch()` (`lib/ai/fetch.ts`) is the single seam. It returns a `Response` so each call site keeps its own error handling, and in demo resolves fixtures from `lib/demo/fixtures/ai.ts`. Never monkeypatch `window.fetch` here — it would also intercept the Supabase client and the service worker.
 - Recipe Q&A (`components/recipe-qa-sheet.tsx`) is the one feature disabled in demo; faking the streaming tool-approval transport isn't worth it.
 
+### Session restore
+
+iOS evicts a backgrounded PWA and relaunches it at `/`, which used to drop the user mid-cook. `lib/cook-session.ts` keeps one session in localStorage (`remix:cook-session:v1:{demo|live}`): the flow state of `app/page.tsx` or `app/recipe/[id]/recipe-page-client.tsx`, RecipeDisplay's progress (view, step, completed steps, scaled/swapped recipe), and timers (wall-clock `endsAt`, so they catch up on restore).
+
+- On a fresh document load at `/` (or `/login`), home auto-restores: it hydrates its own flow, or `router.replace`s to the saved recipe. Arriving at home by in-app navigation shows `ResumeCookCard` instead.
+- The saved recipe page is server-rendered, so it restores after hydration and remounts RecipeDisplay via its `key`. RecipeDisplay never reads storage itself; it takes `restoreSnapshot` and only writes once `persist` is true.
+- The session is cleared by the Home button, starting a new recipe, sign-out (both namespaces), and "Done!" on a saved recipe with no running timers. It expires after 24h.
+
 ### Data Layer
 
 - **Supabase** (PostgreSQL): `saved_recipes` (JSONB recipe data), `meal_plan_entries`, `push_timers`

@@ -2,6 +2,7 @@
 
 import { LogOut } from 'lucide-react'
 import { useDemoMode } from '@/components/providers'
+import { clearAllCookSessions } from '@/lib/cook-session'
 
 export function SignOutButton() {
   const demo = useDemoMode()
@@ -10,6 +11,9 @@ export function SignOutButton() {
   if (demo) return null
 
   const handleSubmit = async () => {
+    // A shared device shouldn't hand the next person this cook.
+    clearAllCookSessions()
+
     // Drop the cached static assets so a signed-out browser can't serve
     // anything from the previous session.
     if ('caches' in window) {

@@ -1,11 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { RecipeDisplay } from '@/components/recipe-display'
 import { ImprovementSuggestions } from '@/components/improvement-suggestions'
 import { ProcessingOverlay } from '@/components/processing-overlay'
 import { ImprovedRecipe, RecipeAnalysis, SuggestedImprovement, serializeRecipe } from '@/lib/recipe-types'
 import { aiFetch } from '@/lib/ai/fetch'
+import { type DisplaySnapshot, type SavedFlow, readCookSession, writeCookFlow } from '@/lib/cook-session'
 
 interface RecipePageClientProps {
   initialRecipe: ImprovedRecipe
@@ -31,6 +32,54 @@ export function RecipePageClient({
   const [improveFromRecipe, setImproveFromRecipe] = useState<string | null>(null)
   const [previousRecipe, setPreviousRecipe] = useState<ImprovedRecipe | null>(null)
   const [currentSavedId, setCurrentSavedId] = useState(savedRecipeId)
+
+  // Session restore. This page is server-rendered, so the stored session is
+  // read after hydration; a restored RecipeDisplay is remounted via its key.
+  const [restoreChecked, setRestoreChecked] = useState(false)
+  const [restoredDisplay, setRestoredDisplay] = useState<DisplaySnapshot | undefined>(undefined)
+
+  const currentFlow = (): SavedFlow => ({
+    kind: 'saved',
+    recipeId: savedRecipeId,
+    viewState,
+    recipe,
+    analysis,
+    isReimproved,
+    improveFromRecipe,
+    previousRecipe,
+    currentSavedId,
+  })
+
+  useEffect(() => {
+    const session = readCookSession()
+    const flow = session?.flow
+    if (flow?.kind === 'saved' && flow.recipeId === savedRecipeId) {
+      setViewState(flow.viewState)
+      setRecipe(flow.recipe)
+      setAnalysis(flow.analysis)
+      setIsReimproved(flow.isReimproved)
+      setImproveFromRecipe(flow.improveFromRecipe)
+      setPreviousRecipe(flow.previousRecipe)
+      setCurrentSavedId(flow.currentSavedId)
+      setRestoredDisplay(session?.display)
+    } else {
+      // Replace any other session now, before RecipeDisplay starts reading
+      // timers from it.
+      writeCookFlow(currentFlow())
+    }
+    setRestoreChecked(true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [savedRecipeId])
+
+  useEffect(() => {
+    if (restoreChecked) writeCookFlow(currentFlow())
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [restoreChecked, viewState, recipe, analysis, isReimproved, improveFromRecipe, previousRecipe, currentSavedId])
+
+  // A restored snapshot only applies to the first RecipeDisplay after restore.
+  useEffect(() => {
+    if (restoreChecked && viewState !== 'display') setRestoredDisplay(undefined)
+  }, [restoreChecked, viewState])
 
   const handleImproveFurther = async () => {
     setProcessingType('analyzing')
@@ -140,6 +189,9 @@ export function RecipePageClient({
     <>
       <ProcessingOverlay type="analyzing" isVisible={processingType === 'analyzing'} />
       <RecipeDisplay
+        // RecipeDisplay keeps its own copy of the recipe, so a restored
+        // session has to remount it rather than just pass new props.
+        key={restoredDisplay || recipe !== initialRecipe ? 'restored' : 'initial'}
         recipe={recipe}
         homeHref="/"
         savedRecipeId={currentSavedId}
@@ -149,6 +201,8 @@ export function RecipePageClient({
         onImproveFurther={handleImproveFurther}
         onReimproveFromOriginal={analysis ? handleReimproveFromOriginal : undefined}
         isReimproved={isReimproved}
+        restoreSnapshot={restoredDisplay}
+        persist={restoreChecked}
       />
     </>
   )

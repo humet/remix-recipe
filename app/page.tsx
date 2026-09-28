@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { listRecipeTags } from '@/lib/data'
 import { aiFetch } from '@/lib/ai/fetch'
 import { RecipeInput } from '@/components/recipe-input'
@@ -13,11 +14,21 @@ import { ImprovedRecipe, RecipeAnalysis, SuggestedImprovement, serializeRecipe }
 import { CalendarDays } from 'lucide-react'
 import { TonightsDinner } from '@/components/tonights-dinner'
 import { SignOutButton } from '@/components/sign-out-button'
+import { ResumeCookCard } from '@/components/resume-cook-card'
+import {
+  type CookSession,
+  type DisplaySnapshot,
+  clearCookSession,
+  consumeFreshLaunch,
+  readCookSession,
+  writeCookFlow,
+} from '@/lib/cook-session'
 
 type AppState = 'input' | 'suggestions' | 'result'
 type ProcessingType = 'analyzing' | 'improving' | null
 
 export default function Home() {
+  const router = useRouter()
   const [appState, setAppState] = useState<AppState>('input')
   const [analysis, setAnalysis] = useState<RecipeAnalysis | null>(null)
   const [recipe, setRecipe] = useState<ImprovedRecipe | null>(null)
@@ -29,6 +40,69 @@ export default function Home() {
   const [improveFromRecipe, setImproveFromRecipe] = useState<string | null>(null)
   const [previousRecipe, setPreviousRecipe] = useState<ImprovedRecipe | null>(null)
   const existingTagsRef = useRef<string[]>([])
+
+  // Session restore. Nothing renders until the stored session has been
+  // checked, so a relaunch mid-cook doesn't flash the input screen first.
+  const [restoreChecked, setRestoreChecked] = useState(false)
+  const [restoredDisplay, setRestoredDisplay] = useState<DisplaySnapshot | undefined>(undefined)
+  const [resumable, setResumable] = useState<CookSession | null>(null)
+
+  const resumeSession = (session: CookSession) => {
+    const { flow } = session
+    if (flow.kind === 'saved') {
+      router.replace(`/recipe/${flow.recipeId}`)
+      return false
+    }
+    setAnalysis(flow.analysis)
+    setRecipe(flow.recipe)
+    setSavedRecipeId(flow.savedRecipeId)
+    setOriginalInput(flow.originalInput)
+    setIsReimproved(flow.isReimproved)
+    setImproveFromRecipe(flow.improveFromRecipe)
+    setPreviousRecipe(flow.previousRecipe)
+    setRestoredDisplay(session.display)
+    setAppState(flow.appState)
+    setResumable(null)
+    window.scrollTo(0, 0)
+    return true
+  }
+
+  useEffect(() => {
+    const session = readCookSession()
+    const fresh = consumeFreshLaunch()
+    if (session && fresh) {
+      // A saved-recipe session navigates away; keep the blank gate up.
+      if (!resumeSession(session)) return
+    } else if (session) {
+      setResumable(session)
+    }
+    setRestoreChecked(true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Keep the stored flow in step with the state machine. In-flight AI calls
+  // aren't persisted — a reload mid-request lands on the last stable screen.
+  useEffect(() => {
+    if (!restoreChecked || appState === 'input') return
+    writeCookFlow({
+      kind: 'home',
+      appState,
+      analysis,
+      recipe,
+      savedRecipeId,
+      originalInput,
+      isReimproved,
+      improveFromRecipe,
+      previousRecipe,
+    })
+  }, [restoreChecked, appState, analysis, recipe, savedRecipeId, originalInput, isReimproved, improveFromRecipe, previousRecipe])
+
+  // A restored snapshot only applies to the first RecipeDisplay after restore.
+  // Gated on restoreChecked, or the first commit (still 'input') would wipe
+  // the snapshot the restore effect has just set.
+  useEffect(() => {
+    if (restoreChecked && appState !== 'result') setRestoredDisplay(undefined)
+  }, [restoreChecked, appState])
 
   // Load existing tags from saved recipes so the AI can reuse them
   useEffect(() => {
@@ -58,6 +132,9 @@ export default function Home() {
       }
 
       const data = await response.json()
+      // A new recipe starts a new session — don't inherit an old one's timers.
+      clearCookSession()
+      setResumable(null)
       setAnalysis(data.analysis)
       setAppState('suggestions')
       window.scrollTo(0, 0)
@@ -113,6 +190,9 @@ export default function Home() {
   }
 
   const handleBackToInput = () => {
+    clearCookSession()
+    setResumable(null)
+    setRestoredDisplay(undefined)
     setAppState('input')
     window.scrollTo(0, 0)
     setAnalysis(null)
@@ -187,6 +267,10 @@ export default function Home() {
 
   const isLoading = processingType !== null
 
+  if (!restoreChecked) {
+    return <main className="min-h-screen bg-background" />
+  }
+
   // Render based on app state
   if (appState === 'result' && recipe) {
     return (
@@ -202,6 +286,8 @@ export default function Home() {
           onImproveFurther={handleImproveFurther}
           onReimproveFromOriginal={analysis ? handleReimproveFromOriginal : undefined}
           isReimproved={isReimproved}
+          restoreSnapshot={restoredDisplay}
+          persist
         />
       </>
     )
@@ -234,6 +320,17 @@ export default function Home() {
             {error}
           </div>
         </div>
+      )}
+
+      {resumable && (
+        <ResumeCookCard
+          session={resumable}
+          onResume={() => resumeSession(resumable)}
+          onDismiss={() => {
+            clearCookSession()
+            setResumable(null)
+          }}
+        />
       )}
 
       <TonightsDinner />
