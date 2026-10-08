@@ -97,7 +97,7 @@ export function demoImprovedRecipe(
 export function demoScaledRecipe(
   recipe: ImprovedRecipe,
   newServings: string,
-): { scaledRecipe: ImprovedRecipe; scalingNotes: string } {
+): { scaledRecipe: ImprovedRecipe; scalingNotes: string[] } {
   const target = parseFloat(newServings) || 1
   const current = parseFloat(recipe.servings) || 1
   const factor = target / current
@@ -112,10 +112,11 @@ export function demoScaledRecipe(
       })),
       steps: recipe.steps,
     },
-    scalingNotes:
+    scalingNotes: [
       factor > 1
         ? 'Scaled up. Use a larger pan so nothing steams instead of browning, and expect the cooking times to stretch a little.'
         : 'Scaled down. Watch it closely towards the end — smaller quantities cook faster than the stated times.',
+    ],
   }
 }
 

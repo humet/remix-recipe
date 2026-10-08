@@ -4,6 +4,7 @@ import { createContext, useContext } from 'react'
 import { useServiceWorker, type PushState } from '@/components/sw-register'
 import { setDemoMode } from '@/lib/demo/mode'
 import { DemoBanner } from '@/components/demo-banner'
+import { ThemeProvider } from '@/components/theme-provider'
 import { useTrackInAppHistory } from '@/lib/navigation'
 
 const PushContext = createContext<PushState>({
@@ -38,11 +39,18 @@ export function Providers({
   useTrackInAppHistory()
 
   return (
-    <DemoContext.Provider value={demo}>
-      <PushContext.Provider value={pushState}>
-        {demo && <DemoBanner />}
-        {children}
-      </PushContext.Provider>
-    </DemoContext.Provider>
+    <ThemeProvider
+      attribute="class"
+      defaultTheme="system"
+      enableSystem
+      disableTransitionOnChange
+    >
+      <DemoContext.Provider value={demo}>
+        <PushContext.Provider value={pushState}>
+          {demo && <DemoBanner />}
+          {children}
+        </PushContext.Provider>
+      </DemoContext.Provider>
+    </ThemeProvider>
   )
 }

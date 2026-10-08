@@ -109,7 +109,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 function HorizontalScroll({ children }: { children: React.ReactNode }) {
   return (
-    <div className="-mx-5 px-5 overflow-x-auto scrollbar-none">
+    <div className="-mx-5 px-5 overflow-x-auto no-scrollbar">
       <div className="flex gap-3 pb-1" style={{ minWidth: 'min-content' }}>
         {children}
       </div>
