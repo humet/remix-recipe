@@ -8,7 +8,9 @@ import { DEMO_RECIPES } from './fixtures/recipes'
  * have it all survive a refresh — without a single request to Supabase.
  */
 
-const KEY = 'remix:demo:v1'
+// Bump when the fixtures change so returning visitors get the new set.
+const KEY = 'remix:demo:v2'
+const LEGACY_KEYS = ['remix:demo:v1']
 const MAX_RECIPES = 50
 
 export interface DemoMealPlanRow {
@@ -83,6 +85,13 @@ export function read(): DemoState {
 
   const fresh = seed()
   write(fresh)
+  for (const legacy of LEGACY_KEYS) {
+    try {
+      globalThis.localStorage?.removeItem(legacy)
+    } catch {
+      // Best effort — a stale key is only wasted space.
+    }
+  }
   return fresh
 }
 

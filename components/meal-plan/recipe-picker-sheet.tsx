@@ -4,9 +4,11 @@ import { useEffect, useRef, useState } from 'react'
 import { listRecipes, type RecipeListRow } from '@/lib/data'
 import { useRecipeFilter } from '@/hooks/use-recipe-filter'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
-import { Badge } from '@/components/ui/badge'
-import { Input } from '@/components/ui/input'
-import { Clock, Users, ChefHat, Loader2, Search, X } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
+import { SearchField } from '@/components/recipe-search/search-field'
+import { FilterChips } from '@/components/recipe-search/filter-chips'
+import { ResultRow } from '@/components/recipe-search/result-row'
+import { NoResults, SearchStatus } from '@/components/recipe-search/search-status'
 import { useDataChangeListener } from '@/lib/events'
 
 function useKeyboardOffset() {
@@ -52,15 +54,8 @@ export function RecipePickerSheet({ isOpen, onClose, onSelect }: RecipePickerShe
   const [loading, setLoading] = useState(true)
   const { keyboardHeight, viewportHeight, offsetTop } = useKeyboardOffset()
 
-  const {
-    searchQuery,
-    setSearchQuery,
-    activeFilters,
-    toggleFilter,
-    setActiveFilters,
-    allTags,
-    filteredRecipes,
-  } = useRecipeFilter({ recipes })
+  const search = useRecipeFilter({ recipes })
+  const { searchQuery, setSearchQuery, favouritesOnly, setFavouritesOnly } = search
 
   const fetchRecipes = async () => {
     setLoading(true)
@@ -71,8 +66,7 @@ export function RecipePickerSheet({ isOpen, onClose, onSelect }: RecipePickerShe
   useEffect(() => {
     if (!isOpen) return
     fetchRecipes()
-    setSearchQuery('')
-    setActiveFilters([])
+    search.clearAll()
   }, [isOpen])
 
   useDataChangeListener('recipes-changed', fetchRecipes)
@@ -89,29 +83,25 @@ export function RecipePickerSheet({ isOpen, onClose, onSelect }: RecipePickerShe
           transform: offsetTop > 0 ? `translateY(${offsetTop}px)` : undefined,
         }}
       >
-        <SheetHeader className="px-5 pt-5 pb-3 border-b border-border/30">
+        <SheetHeader className="px-5 pt-5 pb-2">
           <SheetTitle>Choose a recipe</SheetTitle>
           <SheetDescription>Pick a saved recipe for this day</SheetDescription>
-          <div className="relative mt-2">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search recipes..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 pr-9 glass border-none h-9 text-sm"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            )}
-          </div>
+          <SearchField value={searchQuery} onChange={setSearchQuery} className="mt-2" />
         </SheetHeader>
+        {!loading && recipes.length > 0 && (
+          <FilterChips
+            className="pb-3 border-b border-border/30"
+            facets={search.tagFacets}
+            onToggleTag={search.toggleFilter}
+            favouritesOnly={favouritesOnly}
+            favouriteCount={search.favouriteCount}
+            onToggleFavourites={() => setFavouritesOnly(v => !v)}
+            hasFilters={search.hasFilters}
+            onClear={search.clearFilters}
+          />
+        )}
 
-        <div className="flex-1 overflow-y-auto p-5" style={{ paddingBottom: keyboardHeight > 0 ? keyboardHeight + 20 : 32 }}>
+        <div className="flex-1 overflow-y-auto px-5 pt-3" style={{ paddingBottom: keyboardHeight > 0 ? keyboardHeight + 20 : 32 }}>
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -120,79 +110,31 @@ export function RecipePickerSheet({ isOpen, onClose, onSelect }: RecipePickerShe
             <p className="text-sm text-muted-foreground text-center py-8">
               No saved recipes yet. Remix a recipe first, then save it to add it to your plan.
             </p>
+          ) : search.results.length === 0 ? (
+            <NoResults
+              query={searchQuery}
+              hiddenByFilters={search.hasFilters ? search.unfilteredCount : 0}
+              onClearFilters={search.clearFilters}
+              onClearSearch={() => setSearchQuery('')}
+              showRemix={false}
+            />
           ) : (
-            <div className="flex flex-col gap-4">
-              {allTags.length > 0 && (
-                <div className="flex gap-2 items-center overflow-x-auto no-scrollbar -mx-5 px-5">
-                  {allTags.map(tag => (
-                    <Badge
-                      key={tag}
-                      variant={activeFilters.includes(tag) ? 'default' : 'outline'}
-                      className="cursor-pointer select-none shrink-0"
-                      onClick={() => toggleFilter(tag)}
-                    >
-                      {tag}
-                    </Badge>
-                  ))}
-                  {activeFilters.length > 0 && (
-                    <button
-                      onClick={() => setActiveFilters([])}
-                      className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors ml-1 shrink-0"
-                    >
-                      <X className="h-3 w-3" />
-                      Clear
-                    </button>
-                  )}
-                </div>
-              )}
-
-              {filteredRecipes.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">No recipes match your search.</p>
-              ) : (
-                <div className="flex flex-col gap-3">
-                  {filteredRecipes.map((saved) => {
-                    const recipe = saved.recipe_data
-                    return (
-                      <button
-                        key={saved.id}
-                        onClick={() => onSelect(saved.id)}
-                        className="w-full text-left glass rounded-2xl p-4 hover:ring-2 hover:ring-primary/30 transition-all active:scale-[0.98] cursor-pointer"
-                      >
-                        <h3 className="font-semibold text-foreground truncate">{saved.title}</h3>
-                        <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
-                          {recipe.description}
-                        </p>
-
-                        {(recipe.tags ?? []).length > 0 && (
-                          <div className="flex flex-wrap gap-1.5 mt-2">
-                            {(recipe.tags ?? []).map(tag => (
-                              <Badge key={tag} variant="secondary" className="text-[10px] px-1.5 py-0">
-                                {tag}
-                              </Badge>
-                            ))}
-                          </div>
-                        )}
-
-                        <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground">
-                          <div className="flex items-center gap-1">
-                            <Clock className="h-3.5 w-3.5" />
-                            <span>{recipe.cookTime}</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Users className="h-3.5 w-3.5" />
-                            <span>{recipe.servings}</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <ChefHat className="h-3.5 w-3.5" />
-                            <span>{recipe.difficulty}</span>
-                          </div>
-                        </div>
-                      </button>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
+            <>
+              <SearchStatus
+                total={search.results.length}
+                isSearching={search.isSearching}
+                hasFilters={search.hasFilters}
+                partial={search.partial}
+                unmatchedTerms={search.unmatchedTerms}
+              />
+              <ul className="flex flex-col gap-3 mt-2">
+                {search.results.map((result) => (
+                  <li key={result.recipe.id}>
+                    <ResultRow result={result} onSelect={() => onSelect(result.recipe.id)} />
+                  </li>
+                ))}
+              </ul>
+            </>
           )}
         </div>
       </SheetContent>
