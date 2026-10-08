@@ -199,10 +199,10 @@ export function useTimers(pushSubscription?: PushSubscription | null, persistenc
     // Play sound using Web Audio API
     try {
       if (!audioContextRef.current) {
-        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)()
+        audioContextRef.current = new (window.AudioContext || (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext)()
       }
       createBeepSound(audioContextRef.current)
-    } catch (err) {
+    } catch {
       // Audio not available
     }
 

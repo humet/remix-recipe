@@ -387,16 +387,6 @@ export function RecipeDisplay({ recipe: initialRecipe, onHome, homeHref, savedRe
     }
   }
 
-  const toggleStepComplete = (stepIndex: number) => {
-    const newCompleted = new Set(completedSteps)
-    if (newCompleted.has(stepIndex)) {
-      newCompleted.delete(stepIndex)
-    } else {
-      newCompleted.add(stepIndex)
-    }
-    setCompletedSteps(newCompleted)
-  }
-
   const nextStep = () => {
     if (currentStep < recipe.steps.length - 1) {
       setCurrentStep(currentStep + 1)
