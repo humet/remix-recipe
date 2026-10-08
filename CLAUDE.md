@@ -117,5 +117,5 @@ AI model requests (`google/gemini-3-flash`) are routed through the Vercel AI Gat
 - TypeScript strict mode enabled; `ignoreBuildErrors: true` in next.config.mjs
 - Images are unoptimized in Next.js config (static export compatibility)
 - Vercel Analytics is currently disabled due to a runtime error
-- `public/sw.js` must never cache navigations, or a cached HTML shell bypasses the auth gate. Bump `CACHE_NAME` when changing its caching behaviour.
+- `public/sw.js` must never cache navigations or RSC payloads (`?_rsc=` / `RSC` header — client-side navigations aren't `mode: 'navigate'`), or a cached page bypasses the auth gate. It caches only an allowlist of files `proxy.ts` doesn't gate (hashed `/_next/static/`, icons, manifest), and in dev it's registered as `/sw.js?dev` and caches nothing. Bump `CACHE_NAME` when changing its caching behaviour.
 - `ignoreBuildErrors` means `pnpm build` won't catch type errors — run `pnpm exec tsc --noEmit`
