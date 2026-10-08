@@ -47,12 +47,12 @@ const categoryIcons: Record<SuggestedImprovement['category'], typeof ChefHat> = 
 const categoryColors: Record<SuggestedImprovement['category'], string> = {
   taste: 'bg-primary/10 text-primary border-primary/20',
   health: 'bg-accent/10 text-accent border-accent/20',
-  'kid-friendly': 'bg-amber-500/10 text-amber-600 border-amber-500/20',
-  easier: 'bg-blue-500/10 text-blue-600 border-blue-500/20',
-  faster: 'bg-orange-500/10 text-orange-600 border-orange-500/20',
-  vegetarian: 'bg-green-500/10 text-green-600 border-green-500/20',
-  budget: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20',
-  presentation: 'bg-pink-500/10 text-pink-600 border-pink-500/20',
+  'kid-friendly': 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
+  easier: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20',
+  faster: 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20',
+  vegetarian: 'bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20',
+  budget: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
+  presentation: 'bg-pink-500/10 text-pink-600 dark:text-pink-400 border-pink-500/20',
 }
 
 export function ImprovementSuggestions({
@@ -210,7 +210,7 @@ export function ImprovementSuggestions({
                     <div className="flex items-center gap-2">
                       <h3 className="font-medium text-foreground">{improvement.title}</h3>
                       {isSelected && (
-                        <div className="h-5 w-5 flex items-center justify-center rounded-full bg-primary text-white">
+                        <div className="h-5 w-5 flex items-center justify-center rounded-full bg-primary text-primary-foreground">
                           <Check className="h-3 w-3" />
                         </div>
                       )}

@@ -414,9 +414,9 @@ export function RecipeDisplay({ recipe: initialRecipe, onHome, homeHref, savedRe
       case 'Easy':
         return 'bg-accent text-accent-foreground'
       case 'Medium':
-        return 'bg-amber-100 text-amber-800'
+        return 'bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300'
       case 'Hard':
-        return 'bg-red-100 text-red-800'
+        return 'bg-red-100 text-red-800 dark:bg-red-500/15 dark:text-red-300'
       default:
         return 'bg-secondary text-secondary-foreground'
     }
@@ -483,7 +483,7 @@ export function RecipeDisplay({ recipe: initialRecipe, onHome, homeHref, savedRe
           <div className="flex flex-col gap-6">
             {/* Step Number Badge */}
             <div className="flex items-start gap-3">
-              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-accent text-white font-bold text-2xl shadow-lg shadow-primary/25">
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-accent text-primary-foreground font-bold text-2xl shadow-lg shadow-primary/25">
                 {step.stepNumber}
               </div>
               {/* Timings - support both new array format and legacy string format */}
@@ -594,7 +594,7 @@ export function RecipeDisplay({ recipe: initialRecipe, onHome, homeHref, savedRe
         {/* Q&A FAB - push up when timer bar is visible */}
         <button
           onClick={() => setQaSheetOpen(true)}
-          className={`fixed right-5 z-30 h-14 w-14 flex items-center justify-center rounded-full bg-gradient-to-r from-primary to-accent text-white shadow-lg shadow-primary/25 hover:scale-110 active:scale-95 transition-all ${timerHook.timers.length > 0 ? 'bottom-48' : 'bottom-28'}`}
+          className={`fixed right-5 z-30 h-14 w-14 flex items-center justify-center rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-lg shadow-primary/25 hover:scale-110 active:scale-95 transition-all ${timerHook.timers.length > 0 ? 'bottom-48' : 'bottom-28'}`}
           aria-label="Ask about this recipe"
         >
           <MessageCircle className="h-6 w-6" />
@@ -702,7 +702,7 @@ export function RecipeDisplay({ recipe: initialRecipe, onHome, homeHref, savedRe
             <div className="flex flex-col gap-3 p-4 glass rounded-2xl border-l-4 border-amber-500">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Info className="h-5 w-5 text-amber-600" />
+                  <Info className="h-5 w-5 text-amber-600 dark:text-amber-400" />
                   <h3 className="font-semibold text-foreground">Scaling Notes</h3>
                 </div>
                 <button
@@ -873,7 +873,7 @@ export function RecipeDisplay({ recipe: initialRecipe, onHome, homeHref, savedRe
                 >
                   <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-sm font-semibold ${
                     completedSteps.has(index) 
-                      ? 'bg-gradient-to-br from-accent to-primary text-white' 
+                      ? 'bg-gradient-to-br from-accent to-primary text-primary-foreground' 
                       : 'bg-primary/10 text-primary'
                   }`}>
                     {completedSteps.has(index) ? <Check className="h-4 w-4" /> : step.stepNumber}
@@ -943,7 +943,7 @@ export function RecipeDisplay({ recipe: initialRecipe, onHome, homeHref, savedRe
       {/* Q&A FAB */}
       <button
         onClick={() => setQaSheetOpen(true)}
-        className="fixed bottom-28 right-5 z-30 h-14 w-14 flex items-center justify-center rounded-full bg-gradient-to-r from-primary to-accent text-white shadow-lg shadow-primary/25 hover:scale-110 active:scale-95 transition-transform"
+        className="fixed bottom-28 right-5 z-30 h-14 w-14 flex items-center justify-center rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-lg shadow-primary/25 hover:scale-110 active:scale-95 transition-transform"
         aria-label="Ask about this recipe"
       >
         <MessageCircle className="h-6 w-6" />

@@ -35,7 +35,7 @@ export default async function RootLayout({
   const demo = await isDemoRequest()
 
   return (
-    <html lang="en" className="bg-background">
+    <html lang="en" className="bg-background" suppressHydrationWarning>
       <body className={`${inter.variable} font-sans antialiased`}>
         <div className="gradient-bg" aria-hidden="true" />
         <Providers demo={demo}>{children}</Providers>

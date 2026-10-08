@@ -217,7 +217,7 @@ export function RecipeQASheet({ isOpen, onClose, recipeContext, recipe, onRecipe
 
                     return (
                       <div key={message.id} className="flex justify-end">
-                        <div className="max-w-[80%] px-4 py-2.5 rounded-2xl rounded-br-md bg-gradient-to-r from-primary to-accent text-white text-sm leading-relaxed">
+                        <div className="max-w-[80%] px-4 py-2.5 rounded-2xl rounded-br-md bg-gradient-to-r from-primary to-accent text-primary-foreground text-sm leading-relaxed">
                           {text}
                         </div>
                       </div>
@@ -312,7 +312,7 @@ export function RecipeQASheet({ isOpen, onClose, recipeContext, recipe, onRecipe
               <button
                 onClick={() => handleSend(input)}
                 disabled={!input.trim() || !isReady}
-                className="h-11 w-11 flex items-center justify-center rounded-xl bg-gradient-to-r from-primary to-accent text-white disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105 active:scale-95 transition-transform shrink-0"
+                className="h-11 w-11 flex items-center justify-center rounded-xl bg-gradient-to-r from-primary to-accent text-primary-foreground disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105 active:scale-95 transition-transform shrink-0"
                 aria-label="Send"
               >
                 {status === 'submitted' ? (
@@ -348,7 +348,7 @@ function ToolApprovalCard({
         <div className="flex gap-2">
           <button
             onClick={() => onApprove(part.approval!.id)}
-            className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-gradient-to-r from-primary to-accent text-white text-sm font-medium hover:scale-[1.02] active:scale-[0.98] transition-transform"
+            className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-gradient-to-r from-primary to-accent text-primary-foreground text-sm font-medium hover:scale-[1.02] active:scale-[0.98] transition-transform"
           >
             <Check className="h-4 w-4" />
             Yes, apply
