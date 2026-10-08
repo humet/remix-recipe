@@ -15,6 +15,7 @@ pnpm dev          # Start dev server
 pnpm build        # Production build
 pnpm lint         # Run ESLint
 pnpm start        # Start production server
+pnpm search:check # Recipe search relevance cases against the demo fixtures (--legacy: old matcher)
 ```
 
 Package manager is **pnpm**. No test framework is configured.
@@ -78,7 +79,9 @@ iOS evicts a backgrounded PWA and relaunches it at `/`, which used to drop the u
 - `hooks/` — `use-timers.ts` (multi-timer with Web Audio API, wake lock, notifications), `use-mobile.ts`
 - `lib/recipe-types.ts` — Core TypeScript interfaces (`ImprovedRecipe`, `RecipeAnalysis`, `Ingredient`, `RecipeStep`, `MealPlanEntry`)
 - `lib/data/` — Repository layer (facade + Supabase/demo backends)
-- `lib/demo/` — Demo flag, localStorage store, and fixtures
+- `lib/demo/` — Demo flag, localStorage store, and fixtures (bump the store key in `store.ts` when fixtures change)
+- `lib/search/recipe-search.ts` — Pure recipe matcher/scorer; `hooks/use-recipe-filter.ts` wraps it with filter state, `components/recipe-search/` renders it for the recipes page and meal-plan picker
+- `lib/navigation.ts` — `canGoBackInApp()` for in-app back buttons (the PWA runs standalone, with no browser back)
 - `lib/auth/require-user.ts` — Server-side session guard for route handlers
 - `lib/hooks/use-toast.ts` — Toast notification system
 
@@ -108,9 +111,11 @@ AI model requests (`google/gemini-3-flash`) are routed through the Vercel AI Gat
 
 ## Conventions
 
+- UI work: use the project skill `.claude/skills/ux-design` (render in demo mode at phone size, critique, build, re-check)
+
 - Path alias: `@/*` maps to project root
 - TypeScript strict mode enabled; `ignoreBuildErrors: true` in next.config.mjs
 - Images are unoptimized in Next.js config (static export compatibility)
 - Vercel Analytics is currently disabled due to a runtime error
-- `public/sw.js` must never cache navigations, or a cached HTML shell bypasses the auth gate. Bump `CACHE_NAME` when changing its caching behaviour.
+- `public/sw.js` must never cache navigations or RSC payloads (`?_rsc=` / `RSC` header — client-side navigations aren't `mode: 'navigate'`), or a cached page bypasses the auth gate. It caches only an allowlist of files `proxy.ts` doesn't gate (hashed `/_next/static/`, icons, manifest), and in dev it's registered as `/sw.js?dev` and caches nothing. Bump `CACHE_NAME` when changing its caching behaviour.
 - `ignoreBuildErrors` means `pnpm build` won't catch type errors — run `pnpm exec tsc --noEmit`

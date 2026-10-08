@@ -5,6 +5,7 @@ import { useServiceWorker, type PushState } from '@/components/sw-register'
 import { setDemoMode } from '@/lib/demo/mode'
 import { DemoBanner } from '@/components/demo-banner'
 import { ThemeProvider } from '@/components/theme-provider'
+import { useTrackInAppHistory } from '@/lib/navigation'
 
 const PushContext = createContext<PushState>({
   subscription: null,
@@ -35,6 +36,7 @@ export function Providers({
   setDemoMode(demo)
 
   const pushState = useServiceWorker()
+  useTrackInAppHistory()
 
   return (
     <ThemeProvider

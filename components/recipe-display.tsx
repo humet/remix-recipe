@@ -14,6 +14,7 @@ import { usePush } from '@/components/providers'
 import { createRecipe, updateRecipe } from '@/lib/data'
 import { aiFetch } from '@/lib/ai/fetch'
 import { emitDataChange } from '@/lib/events'
+import { canGoBackInApp } from '@/lib/navigation'
 import { getCached, setCache, cacheKey, invalidateCache } from '@/lib/request-cache'
 import {
   type DisplaySnapshot,
@@ -53,6 +54,8 @@ interface RecipeDisplayProps {
   recipe: ImprovedRecipe
   onHome?: () => void
   homeHref?: string
+  /** Shows a back arrow. Returns to the previous in-app page, or here if there isn't one. */
+  backFallbackHref?: string
   savedRecipeId?: string
   onSaved?: (id: string) => void
   originalInput?: string
@@ -67,7 +70,7 @@ interface RecipeDisplayProps {
   persist?: boolean
 }
 
-export function RecipeDisplay({ recipe: initialRecipe, onHome, homeHref, savedRecipeId, onSaved, originalInput, originalAnalysis, onImproveFurther, improveFurtherHref, onReimproveFromOriginal, isReimproved, restoreSnapshot, persist = false }: RecipeDisplayProps) {
+export function RecipeDisplay({ recipe: initialRecipe, onHome, homeHref, backFallbackHref, savedRecipeId, onSaved, originalInput, originalAnalysis, onImproveFurther, improveFurtherHref, onReimproveFromOriginal, isReimproved, restoreSnapshot, persist = false }: RecipeDisplayProps) {
   const router = useRouter()
   const baseKey = useMemo(() => recipeKey(initialRecipe), [initialRecipe])
   // Read once at mount: the snapshot seeds state, it doesn't track it.
@@ -201,13 +204,27 @@ export function RecipeDisplay({ recipe: initialRecipe, onHome, homeHref, savedRe
 
   const hasUnsavedChanges = !isSaved && !!currentSavedId
 
-  const handleHome = () => {
+  // Where to go once the unsaved-changes prompt is dealt with.
+  const [pendingLeave, setPendingLeave] = useState<{ label: string; go: () => void } | null>(null)
+
+  const leave = (label: string, go: () => void) => {
     if (hasUnsavedChanges) {
+      setPendingLeave({ label, go })
       setShowUnsavedPrompt(true)
     } else {
-      navigateHome()
+      go()
     }
   }
+
+  const handleHome = () => leave('Save & Go Home', navigateHome)
+
+  const handleBack = () =>
+    leave('Save & Go Back', () => {
+      // Like Home, backing out is leaving on purpose, so a relaunch shouldn't reopen this recipe.
+      clearCookSession()
+      if (canGoBackInApp()) router.back()
+      else router.push(backFallbackHref ?? '/')
+    })
 
   const handleSaveClick = () => {
     if (isSaved) return
@@ -385,16 +402,6 @@ export function RecipeDisplay({ recipe: initialRecipe, onHome, homeHref, savedRe
     } finally {
       setIsSwapping(false)
     }
-  }
-
-  const toggleStepComplete = (stepIndex: number) => {
-    const newCompleted = new Set(completedSteps)
-    if (newCompleted.has(stepIndex)) {
-      newCompleted.delete(stepIndex)
-    } else {
-      newCompleted.add(stepIndex)
-    }
-    setCompletedSteps(newCompleted)
   }
 
   const nextStep = () => {
@@ -617,6 +624,15 @@ export function RecipeDisplay({ recipe: initialRecipe, onHome, homeHref, savedRe
       {/* Header */}
       <header className="sticky top-0 z-10 glass-strong px-4 py-3">
         <div className="flex items-center gap-3">
+          {backFallbackHref && (
+            <button
+              onClick={handleBack}
+              className="h-10 w-10 -ml-1 flex items-center justify-center rounded-full glass shrink-0 text-foreground"
+              aria-label="Back"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+          )}
           <h1 className="flex-1 text-lg font-semibold text-foreground truncate">{recipe.title}</h1>
           <button
             onClick={handleSaveClick}
@@ -922,12 +938,13 @@ export function RecipeDisplay({ recipe: initialRecipe, onHome, homeHref, savedRe
       {/* Bottom Action Toolbar */}
       <div className="fixed bottom-0 left-0 right-0 p-4 pb-8 glass-strong">
         <div className="flex gap-3">
+          {/* Saved recipes go back to where they were opened from (thumb-reach twin of the header arrow); a fresh remix has nowhere to go back to. */}
           <button
-            onClick={handleHome}
+            onClick={backFallbackHref ? handleBack : handleHome}
             className="h-14 w-14 shrink-0 flex items-center justify-center rounded-2xl glass text-muted-foreground hover:text-foreground hover:scale-105 active:scale-95 transition-all"
-            aria-label="Go home"
+            aria-label={backFallbackHref ? 'Back' : 'Go home'}
           >
-            <Home className="h-5 w-5" />
+            {backFallbackHref ? <ArrowLeft className="h-5 w-5" /> : <Home className="h-5 w-5" />}
           </button>
           <Button
             size="lg"
@@ -1019,17 +1036,17 @@ export function RecipeDisplay({ recipe: initialRecipe, onHome, homeHref, savedRe
                 onClick={async () => {
                   setShowUnsavedPrompt(false)
                   await handleSave()
-                  navigateHome()
+                  ;(pendingLeave?.go ?? navigateHome)()
                 }}
                 className="w-full h-14 rounded-2xl bg-gradient-to-r from-primary to-accent"
               >
-                Save & Go Home
+                {pendingLeave?.label ?? 'Save & Go Home'}
               </Button>
               <Button
                 variant="outline"
                 onClick={() => {
                   setShowUnsavedPrompt(false)
-                  navigateHome()
+                  ;(pendingLeave?.go ?? navigateHome)()
                 }}
                 className="w-full h-14 rounded-2xl glass border-0"
               >

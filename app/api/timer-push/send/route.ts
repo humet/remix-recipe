@@ -50,9 +50,10 @@ export async function POST(request: Request) {
 
   try {
     await webpush.sendNotification(subscription, payload)
-  } catch (err: any) {
-    if (err.statusCode !== 410 && err.statusCode !== 404) {
-      console.error(`Push failed for timer ${timerId}:`, err.message)
+  } catch (err) {
+    const { statusCode, message } = err as { statusCode?: number; message?: string }
+    if (statusCode !== 410 && statusCode !== 404) {
+      console.error(`Push failed for timer ${timerId}:`, message)
     }
   }
 

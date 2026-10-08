@@ -23,8 +23,12 @@ export function useServiceWorker(): PushState {
     setIsSupported(true)
     setPermission(Notification.permission)
 
+    // Still registered in dev so push can be tested, but `?dev` tells the
+    // worker to cache nothing: dev chunks aren't content-hashed.
+    const swUrl = process.env.NODE_ENV === 'production' ? '/sw.js' : '/sw.js?dev'
+
     navigator.serviceWorker
-      .register('/sw.js')
+      .register(swUrl)
       .then(async (registration) => {
         swRef.current = registration
         // Check for existing subscription

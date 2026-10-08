@@ -206,7 +206,7 @@ export function IngredientSwapSheet({
                         className="flex items-center justify-center gap-2 py-4 rounded-2xl border-2 border-dashed border-destructive/30 glass-subtle text-muted-foreground hover:border-destructive/50 hover:text-destructive transition-all"
                       >
                         <Trash2 className="h-5 w-5" />
-                        <span className="text-sm font-medium">I don't have any - remove it</span>
+                        <span className="text-sm font-medium">I don&apos;t have any - remove it</span>
                       </button>
                     </div>
                   ) : (

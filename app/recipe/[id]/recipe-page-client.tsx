@@ -194,6 +194,7 @@ export function RecipePageClient({
         key={restoredDisplay || recipe !== initialRecipe ? 'restored' : 'initial'}
         recipe={recipe}
         homeHref="/"
+        backFallbackHref="/recipes"
         savedRecipeId={currentSavedId}
         onSaved={(id) => setCurrentSavedId(id)}
         originalInput={originalInput}
