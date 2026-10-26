@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
+    "improvements:check": "node --import tsx scripts/improvement-conflicts-check.ts && node --import tsx scripts/improve-recipe-route-check.ts",
     "search:check": "tsx scripts/search-relevance.ts"
   },
   "dependencies": {

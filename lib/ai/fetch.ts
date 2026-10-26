@@ -1,3 +1,5 @@
+import { findSelectedConflict } from '@/lib/improvement-conflicts'
+import type { SuggestedImprovement } from '@/lib/recipe-types'
 import { isDemoMode } from '@/lib/demo/mode'
 import { demoAiResponse, type DemoAiRoute } from '@/lib/demo/ai'
 
@@ -14,6 +16,11 @@ import { demoAiResponse, type DemoAiRoute } from '@/lib/demo/ai'
  */
 export async function aiFetch(route: DemoAiRoute, body: unknown): Promise<Response> {
   if (isDemoMode()) {
+    if (route === '/api/improve-recipe') {
+      const selected = (body as { selectedImprovements?: SuggestedImprovement[] })?.selectedImprovements ?? []
+      const conflict = findSelectedConflict(selected)
+      if (conflict) return Response.json({ error: conflict }, { status: 409 })
+    }
     const data = await demoAiResponse(route, (body ?? {}) as Record<string, unknown>)
     return new Response(JSON.stringify(data), {
       status: 200,

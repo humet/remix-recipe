@@ -37,6 +37,8 @@ export interface SuggestedImprovement {
   category: 'taste' | 'health' | 'kid-friendly' | 'easier' | 'faster' | 'vegetarian' | 'budget' | 'presentation'
   title: string
   description: string
+  // Optional so previously saved analyses remain usable.
+  conflicts?: { improvementId: string; reason: string }[]
 }
 
 export interface RecipeAnalysis {

@@ -136,16 +136,14 @@ export function RecipePageClient({
     try {
       const response = await aiFetch('/api/improve-recipe', {
         parsedRecipe: improveFromRecipe ?? analysis.parsedRecipe,
-        selectedImprovements: selectedImprovements.map(imp => ({
-          title: imp.title,
-          description: imp.description,
-        })),
+        selectedImprovements,
         customRequest,
         existingTags: [],
       })
 
       if (!response.ok) {
-        throw new Error('Failed to improve recipe')
+        const data = await response.json()
+        throw new Error(data.error ?? 'Failed to improve recipe')
       }
 
       const data = await response.json()
@@ -153,7 +151,7 @@ export function RecipePageClient({
       setViewState('display')
       window.scrollTo(0, 0)
     } catch (err) {
-      setError('Something went wrong. Please try again.')
+      setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.')
       console.error('Error:', err)
     } finally {
       setProcessingType(null)
@@ -174,6 +172,7 @@ export function RecipePageClient({
       <>
         <ProcessingOverlay type="improving" isVisible={processingType === 'improving'} />
         <ImprovementSuggestions
+          error={error}
           analysis={analysis}
           onApply={handleApplyImprovements}
           onSkip={() => handleApplyImprovements([], '')}
