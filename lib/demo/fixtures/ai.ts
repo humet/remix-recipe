@@ -37,9 +37,17 @@ export const DEMO_SUGGESTED_IMPROVEMENTS: SuggestedImprovement[] = [
       'Reorder the method so the oven preheats and the water boils while you prep — roughly ten minutes off the total.',
   },
   {
+    id: 'demo-imp-hot',
+    category: 'taste',
+    title: 'Build chilli heat into the sauce',
+    description: 'Cook the chilli into the base for an evenly spicy dish.',
+    conflicts: [{ improvementId: 'demo-imp-kids', reason: 'The base cannot be both spicy and mild.' }],
+  },
+  {
     id: 'demo-imp-kids',
     category: 'kid-friendly',
     title: 'Soften the heat, keep the flavour',
+    conflicts: [{ improvementId: 'demo-imp-hot', reason: 'The base cannot be both spicy and mild.' }],
     description:
       'Move the chilli to a side condiment so the base dish stays mild without tasting bland.',
   },
@@ -72,7 +80,7 @@ export function demoAnalysis(recipeText: string): RecipeAnalysis {
     parsedRecipe:
       trimmed ||
       'Chicken thighs, red onion, cherry tomatoes, olive oil, harissa, honey.\n\n1. Marinate the chicken.\n2. Roast everything on one tray for 40 minutes.\n3. Serve with lemon.',
-    suggestedImprovements: DEMO_SUGGESTED_IMPROVEMENTS.slice(0, 5),
+    suggestedImprovements: DEMO_SUGGESTED_IMPROVEMENTS.slice(0, 6),
   }
 }
 

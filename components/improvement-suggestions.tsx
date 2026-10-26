@@ -1,11 +1,12 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { RecipeAnalysis, SuggestedImprovement } from '@/lib/recipe-types'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { aiFetch } from '@/lib/ai/fetch'
+import { getImprovementConflict } from '@/lib/improvement-conflicts'
 import { 
   ArrowLeft, 
   ChefHat, 
@@ -31,6 +32,7 @@ interface ImprovementSuggestionsProps {
   onHome?: () => void
   homeHref?: string
   isLoading: boolean
+  error?: string | null
 }
 
 const categoryIcons: Record<SuggestedImprovement['category'], typeof ChefHat> = {
@@ -62,7 +64,8 @@ export function ImprovementSuggestions({
   onBack,
   onHome,
   homeHref,
-  isLoading
+  isLoading,
+  error,
 }: ImprovementSuggestionsProps) {
   const router = useRouter()
   const handleHome = onHome ?? (homeHref ? () => router.push(homeHref) : () => router.push('/'))
@@ -73,6 +76,11 @@ export function ImprovementSuggestions({
   const [isValidating, setIsValidating] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const errorRef = useRef<HTMLDivElement>(null)
+
+  const applyErrorRef = useRef<HTMLParagraphElement>(null)
+  useEffect(() => {
+    if (error) applyErrorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }, [error])
 
   const toggleSelection = (id: string) => {
     setSelectedIds(prev => {
@@ -184,19 +192,24 @@ export function ImprovementSuggestions({
             <h2 className="font-semibold text-foreground">Suggested Improvements</h2>
           </div>
           <p className="text-sm text-muted-foreground">
-            Select any improvements you&apos;d like the AI to apply to your recipe.
+            Choose each change you want. You can select several from the same category. Alternatives explain which selection to remove first.
           </p>
 
           <div className="flex flex-col gap-3">
             {analysis.suggestedImprovements.map((improvement) => {
               const Icon = categoryIcons[improvement.category]
               const isSelected = selectedIds.has(improvement.id)
+              const blockingSelection = analysis.suggestedImprovements.find(selected =>
+                selectedIds.has(selected.id) && getImprovementConflict(improvement, selected)
+              )
+              const conflictReason = blockingSelection && getImprovementConflict(improvement, blockingSelection)
               
               return (
                 <button
                   key={improvement.id}
                   onClick={() => toggleSelection(improvement.id)}
-                  disabled={isLoading}
+                  disabled={isLoading || isValidating || !!blockingSelection}
+                  aria-pressed={isSelected}
                   className={`flex items-start gap-3 p-4 rounded-2xl text-left transition-all hover:scale-[1.01] active:scale-[0.99] ${
                     isSelected 
                       ? 'glass-strong ring-2 ring-primary/50' 
@@ -215,15 +228,27 @@ export function ImprovementSuggestions({
                         </div>
                       )}
                     </div>
+                    <p className="text-xs text-muted-foreground mt-1 capitalize">{improvement.category.replace('-', ' ')}</p>
                     <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
                       {improvement.description}
                     </p>
+                    {blockingSelection && (
+                      <p className="text-sm text-foreground mt-2">
+                        {conflictReason} Deselect “{blockingSelection.title}” to choose this instead.
+                      </p>
+                    )}
                   </div>
                 </button>
               )
             })}
           </div>
         </section>
+
+        {error && (
+          <p ref={applyErrorRef} role="alert" className="p-4 glass rounded-2xl border-l-4 border-destructive text-destructive text-sm">
+            {error}
+          </p>
+        )}
 
         {/* Custom Request Section */}
         <section className="flex flex-col gap-4">
