@@ -100,6 +100,8 @@ CRITICAL REQUIREMENTS:
 2. In EVERY step instruction, when you mention an ingredient, include the measurement in parentheses right after the ingredient name.
 3. Keep all other parts of the recipe unchanged unless the modification requires it.
 4. In the "improvements" field, list ONLY the specific changes you made.
+5. Keep each step's "timings" in line with its instruction: add, change or remove timings whenever you change a duration or a step.
+6. Update prepTime, cookTime, servings and difficulty whenever the modification changes them.
 
 CURRENT RECIPE (JSON):
 ${recipeJson}`,
