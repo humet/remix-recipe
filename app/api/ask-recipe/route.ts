@@ -2,6 +2,7 @@ import { streamText, UIMessage, convertToModelMessages, generateText, Output, st
 import { z } from 'zod'
 import { ImprovedRecipe } from '@/lib/recipe-types'
 import { requireUser } from '@/lib/auth/require-user'
+import { DECLINED_CHANGE_REASON, SKIPPED_CHANGE_REASON } from '@/lib/recipe-qa'
 
 export const runtime = 'edge'
 
@@ -60,7 +61,12 @@ RULES:
 TOOL USAGE:
 - When the user asks about making a change to the recipe (substituting an ingredient, adjusting quantities, adding/removing ingredients, changing a technique, modifying for dietary needs), you MUST first write a helpful text response explaining the change (why it works, flavor impact, any tips), and THEN call the modifyRecipe tool. Never call the tool without providing a text explanation first.
 - When the user asks a pure question (what equipment do I need, how long to store, what to serve with, general cooking technique questions), just answer in text without calling any tool.
-- When the modifyRecipe tool call is denied by the user, acknowledge their choice briefly and do NOT say the change was applied. Do not retry the same tool call.
+- A change is only applied when the user taps "Yes, apply" on the approval card. Typing "yes" does not apply it. Never say a change was applied unless the tool returned an updated recipe.
+- When the modifyRecipe tool call is denied with the reason "${DECLINED_CHANGE_REASON}", the user tapped "No thanks". Acknowledge it briefly, do NOT say the change was applied, and do not offer it again unless they ask for it.
+- When it is denied with the reason "${SKIPPED_CHANGE_REASON}", the user typed a new message instead of answering the card. The change was NOT applied, and the user has not rejected it. Answer their new message, then:
+  - If they've said they don't want the change, drop it.
+  - Otherwise, offer it again by calling modifyRecipe, adjusted for anything they've just said. This includes replies that mean "go ahead", such as "yes", "do it" or "no, I like the spice".
+  - Don't offer the same change more than twice in a row. After that, just tell them they can ask for it whenever they like.
 
 RECIPE:
 ${recipeContext}`,
