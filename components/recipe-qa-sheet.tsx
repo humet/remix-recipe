@@ -29,10 +29,20 @@ export function RecipeQASheet({ isOpen, onClose, recipeContext, recipe, onRecipe
   const scrollRef = useRef<HTMLDivElement>(null)
   const [appliedToolCallIds] = useState(() => new Set<string>())
 
+  // useChat keeps the transport from its first render, so the request body is
+  // read from a ref: the recipe changes under the chat (its own edits, scaling,
+  // swaps), and a stale copy would make the next edit undo the earlier ones.
+  const latestRecipeRef = useRef({ recipeContext, recipe })
+  useEffect(() => {
+    latestRecipeRef.current = { recipeContext, recipe }
+  }, [recipeContext, recipe])
+
   const { messages, sendMessage, status, setMessages, stop, error, clearError, regenerate, addToolApprovalResponse } = useChat({
+    // body() runs per request, not during render.
+    // eslint-disable-next-line react-hooks/refs
     transport: new DefaultChatTransport({
       api: '/api/ask-recipe',
-      body: { recipeContext, recipe },
+      body: () => latestRecipeRef.current,
     }),
     sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithApprovalResponses,
   })
@@ -78,6 +88,17 @@ export function RecipeQASheet({ isOpen, onClose, recipeContext, recipe, onRecipe
   const handleSend = (text: string) => {
     if (!text.trim() || !isReady) return
     if (error) clearError()
+    // Asking something else while a change awaits approval skips that change.
+    // Left pending, it's a tool call with no result, and the server rejects
+    // every later message in the conversation.
+    setMessages((prev) => prev.map((message) => message.role !== 'assistant' ? message : {
+      ...message,
+      parts: message.parts.map((part) =>
+        part.type === 'tool-modifyRecipe' && part.state === 'approval-requested'
+          ? { ...part, state: 'output-denied' as const, approval: { id: part.approval.id, approved: false as const, reason: 'User asked something else instead' } }
+          : part
+      ),
+    }))
     sendMessage({ text: text.trim() })
     setInput('')
   }
