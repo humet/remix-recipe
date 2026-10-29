@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { ImprovedRecipe, Ingredient, RecipeAnalysis } from '@/lib/recipe-types'
+import { ImprovedRecipe, Ingredient, RecipeAnalysis, serializeRecipe } from '@/lib/recipe-types'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ProcessingOverlay } from '@/components/processing-overlay'
@@ -268,8 +268,25 @@ export function RecipeDisplay({ recipe: initialRecipe, onHome, homeHref, backFal
   // Q&A sheet state
   const [qaSheetOpen, setQaSheetOpen] = useState(false)
 
+  // A change can drop or merge steps, so keep cooking progress inside the
+  // recipe; otherwise the cooking view looks up a step that no longer exists.
+  const fitProgressToSteps = (stepCount: number) => {
+    setCurrentStep(step => Math.min(step, Math.max(0, stepCount - 1)))
+    setCompletedSteps(prev => {
+      const next = new Set([...prev].filter(index => index < stepCount))
+      return next.size === prev.size ? prev : next
+    })
+  }
+
   const handleChatRecipeUpdate = (newRecipe: ImprovedRecipe) => {
-    setRecipe(newRecipe)
+    // The chat returns a whole recipe, but without tags, and its improvements
+    // list only the change it just made.
+    setRecipe(prev => ({
+      ...newRecipe,
+      tags: prev.tags,
+      improvements: [...new Set([...(prev.improvements ?? []), ...newRecipe.improvements])],
+    }))
+    fitProgressToSteps(newRecipe.steps.length)
     setIsSaved(false)
   }
 
@@ -301,6 +318,19 @@ export function RecipeDisplay({ recipe: initialRecipe, onHome, homeHref, backFal
     return `${recipe.title}\n\nIngredients:\n${recipe.ingredients.map(i => `- ${i.amount} ${i.name}`).join('\n')}\n\nSteps:\n${recipe.steps.map(s => `${s.stepNumber}. ${s.instruction}`).join('\n')}`
   }
 
+  // The Q&A chat can be asked about any part of the recipe, so it gets every
+  // field, plus each step's timers.
+  const getQaContext = () => {
+    const timers = recipe.steps.flatMap((step) => {
+      const timings = step.timings?.length
+        ? step.timings.map((t) => `${t.label}: ${t.duration}`)
+        : step.timing ? [step.timing] : []
+      return timings.map((t) => `- Step ${step.stepNumber}: ${t}`)
+    })
+    const serialized = serializeRecipe(recipe)
+    return timers.length > 0 ? `${serialized}\n\nStep timers:\n${timers.join('\n')}` : serialized
+  }
+
   const handleIngredientTap = (ingredient: Ingredient) => {
     setSelectedIngredient(ingredient)
     setSwapSheetOpen(true)
@@ -318,6 +348,7 @@ export function RecipeDisplay({ recipe: initialRecipe, onHome, homeHref, backFal
     const cached = getCached<{ ingredients: Ingredient[]; steps: unknown[]; swapNote?: string }>(key)
     if (cached) {
       setRecipe({ ...recipe, ingredients: cached.ingredients, steps: cached.steps as typeof recipe.steps })
+      fitProgressToSteps(cached.steps.length)
       if (currentSavedId) setIsSaved(false)
       if (cached.swapNote) setSwapNotes(prev => [...prev, cached.swapNote!])
       invalidateCache('/api/swap-ingredient')
@@ -341,6 +372,7 @@ export function RecipeDisplay({ recipe: initialRecipe, onHome, homeHref, backFal
         ingredients: data.ingredients,
         steps: data.steps,
       })
+      fitProgressToSteps(data.steps.length)
       setCache(key, data)
       if (currentSavedId) setIsSaved(false)
 
@@ -367,6 +399,7 @@ export function RecipeDisplay({ recipe: initialRecipe, onHome, homeHref, backFal
     const cached = getCached<{ ingredients: Ingredient[]; steps: unknown[]; removalNote?: string }>(key)
     if (cached) {
       setRecipe({ ...recipe, ingredients: cached.ingredients, steps: cached.steps as typeof recipe.steps })
+      fitProgressToSteps(cached.steps.length)
       if (currentSavedId) setIsSaved(false)
       if (cached.removalNote) setSwapNotes(prev => [...prev, `Removed ${ingredient.name}: ${cached.removalNote}`])
       invalidateCache('/api/swap-ingredient')
@@ -389,6 +422,7 @@ export function RecipeDisplay({ recipe: initialRecipe, onHome, homeHref, backFal
         ingredients: data.ingredients,
         steps: data.steps,
       })
+      fitProgressToSteps(data.steps.length)
       setCache(key, data)
       if (currentSavedId) setIsSaved(false)
 
@@ -609,7 +643,7 @@ export function RecipeDisplay({ recipe: initialRecipe, onHome, homeHref, backFal
         <RecipeQASheet
           isOpen={qaSheetOpen}
           onClose={() => setQaSheetOpen(false)}
-          recipeContext={getRecipeContext()}
+          recipeContext={getQaContext()}
           recipe={recipe}
           onRecipeUpdate={handleChatRecipeUpdate}
         />
@@ -968,7 +1002,7 @@ export function RecipeDisplay({ recipe: initialRecipe, onHome, homeHref, backFal
       <RecipeQASheet
         isOpen={qaSheetOpen}
         onClose={() => setQaSheetOpen(false)}
-        recipeContext={getRecipeContext()}
+        recipeContext={getQaContext()}
         recipe={recipe}
         onRecipeUpdate={handleChatRecipeUpdate}
       />

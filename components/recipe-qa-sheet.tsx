@@ -6,6 +6,7 @@ import { DefaultChatTransport, lastAssistantMessageIsCompleteWithApprovalRespons
 import { X, MessageCircle, Send, Loader2, AlertCircle, Sparkles, Check, RotateCcw } from 'lucide-react'
 import { ImprovedRecipe } from '@/lib/recipe-types'
 import { useDemoMode } from '@/components/providers'
+import { DECLINED_CHANGE_REASON, SKIPPED_CHANGE_REASON } from '@/lib/recipe-qa'
 import Link from 'next/link'
 
 interface RecipeQASheetProps {
@@ -29,10 +30,20 @@ export function RecipeQASheet({ isOpen, onClose, recipeContext, recipe, onRecipe
   const scrollRef = useRef<HTMLDivElement>(null)
   const [appliedToolCallIds] = useState(() => new Set<string>())
 
+  // useChat keeps the transport from its first render, so the request body is
+  // read from a ref: the recipe changes under the chat (its own edits, scaling,
+  // swaps), and a stale copy would make the next edit undo the earlier ones.
+  const latestRecipeRef = useRef({ recipeContext, recipe })
+  useEffect(() => {
+    latestRecipeRef.current = { recipeContext, recipe }
+  }, [recipeContext, recipe])
+
   const { messages, sendMessage, status, setMessages, stop, error, clearError, regenerate, addToolApprovalResponse } = useChat({
+    // body() runs per request, not during render.
+    // eslint-disable-next-line react-hooks/refs
     transport: new DefaultChatTransport({
       api: '/api/ask-recipe',
-      body: { recipeContext, recipe },
+      body: () => latestRecipeRef.current,
     }),
     sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithApprovalResponses,
   })
@@ -78,6 +89,17 @@ export function RecipeQASheet({ isOpen, onClose, recipeContext, recipe, onRecipe
   const handleSend = (text: string) => {
     if (!text.trim() || !isReady) return
     if (error) clearError()
+    // Asking something else while a change awaits approval skips that change.
+    // Left pending, it's a tool call with no result, and the server rejects
+    // every later message in the conversation.
+    setMessages((prev) => prev.map((message) => message.role !== 'assistant' ? message : {
+      ...message,
+      parts: message.parts.map((part) =>
+        part.type === 'tool-modifyRecipe' && part.state === 'approval-requested'
+          ? { ...part, state: 'output-denied' as const, approval: { id: part.approval.id, approved: false as const, reason: SKIPPED_CHANGE_REASON } }
+          : part
+      ),
+    }))
     sendMessage({ text: text.trim() })
     setInput('')
   }
@@ -246,7 +268,7 @@ export function RecipeQASheet({ isOpen, onClose, recipeContext, recipe, onRecipe
                                 <ToolApprovalCard
                                   part={part}
                                   onApprove={(approvalId) => addToolApprovalResponse({ id: approvalId, approved: true })}
-                                  onDeny={(approvalId) => addToolApprovalResponse({ id: approvalId, approved: false, reason: 'User declined' })}
+                                  onDeny={(approvalId) => addToolApprovalResponse({ id: approvalId, approved: false, reason: DECLINED_CHANGE_REASON })}
                                 />
                               </div>
                             </div>
@@ -334,17 +356,18 @@ function ToolApprovalCard({
   onApprove,
   onDeny,
 }: {
-  part: { state: string; toolCallId: string; input?: unknown; output?: unknown; errorText?: string; approval?: { id: string; approved?: boolean } }
+  part: { state: string; toolCallId: string; input?: unknown; output?: unknown; errorText?: string; approval?: { id: string; approved?: boolean; reason?: string } }
   onApprove: (approvalId: string) => void
   onDeny: (approvalId: string) => void
 }) {
   if (part.state === 'approval-requested') {
     return (
       <div className="glass rounded-2xl p-4 border border-primary/20">
-        <div className="flex items-center gap-2 mb-3">
+        <div className="flex items-center gap-2">
           <Sparkles className="h-4 w-4 text-primary" />
           <span className="text-sm font-medium text-foreground">Apply to your recipe?</span>
         </div>
+        <p className="mt-1 mb-3 text-xs text-muted-foreground">Typing a reply skips this change.</p>
         <div className="flex gap-2">
           <button
             onClick={() => onApprove(part.approval!.id)}
@@ -413,7 +436,9 @@ function ToolApprovalCard({
       <div className="glass rounded-2xl p-4 border border-border/30">
         <div className="flex items-center gap-2">
           <X className="h-4 w-4 text-muted-foreground" />
-          <span className="text-sm text-muted-foreground">Change declined</span>
+          <span className="text-sm text-muted-foreground">
+            {part.approval?.reason === SKIPPED_CHANGE_REASON ? 'Change skipped' : 'Change declined'}
+          </span>
         </div>
       </div>
     )
