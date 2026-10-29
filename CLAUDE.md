@@ -42,9 +42,9 @@ AI routes use Vercel AI SDK's `generateText` with **Google Gemini 3 Flash** (`go
 - **`/api/ask-recipe`** — Streaming recipe Q&A (`streamText` + tool approval, `runtime = 'edge'`)
 - **`/api/validate-request`** — Cheap gate on custom improvement requests; fails open
 
-Non-AI routes: **`/api/timer-push/{schedule,cancel,send}`** for QStash-scheduled web-push timer alerts.
+Non-AI routes: **`/api/timer-push/{schedule,cancel}`** for web-push timer alerts. Each scheduled push is a Vercel Workflow run (`workflows/timer-push.ts`) that sleeps until the timer ends, then sends. `schedule` returns its `runId`, and `cancel` stops the run by that ID. `hooks/use-timers.ts` keeps the ID on the timer and cancels it on pause, reset and remove.
 
-**Every route above requires a session** via `requireUser()` from `lib/auth/require-user.ts` — except `timer-push/send`, which QStash calls server-to-server and which verifies its own signature. Do not add the guard there.
+**Every route above requires a session** via `requireUser()` from `lib/auth/require-user.ts`.
 
 ### Auth and demo mode
 
@@ -65,11 +65,11 @@ iOS evicts a backgrounded PWA and relaunches it at `/`, which used to drop the u
 
 ### Data Layer
 
-- **Supabase** (PostgreSQL): `saved_recipes` (JSONB recipe data), `meal_plan_entries`, `push_timers`
+- **Supabase** (PostgreSQL): `saved_recipes` (JSONB recipe data), `meal_plan_entries`. `push_timers` is left over from QStash timers and is dropped by `006`.
 - **All app data access goes through `lib/data/`** — `index.ts` is the facade that dispatches per call to `supabase-backend.ts` or `demo-backend.ts`. Only `lib/data/*` should import `lib/supabase/client`. Server components use `lib/data/server.ts`.
 - Client setup: `lib/supabase/client.ts` (browser), `lib/supabase/server.ts` (SSR), `lib/supabase/proxy.ts` (used by root `proxy.ts`)
 - RLS is deliberately permissive; protection is the edge gate plus the per-route session check. `scripts/005_document_actual_schema.sql` records the real schema and the multi-user upgrade path.
-- Migrations: `scripts/00{1..5}_*.sql`, run in order
+- Migrations: `scripts/00{1..6}_*.sql`, run in order
 - Cross-component refresh is a window-event bus (`lib/events.ts`), not SWR — writes must `emitDataChange('recipes-changed' | 'meal-plan-changed')`
 
 ### Key Directories
@@ -117,5 +117,6 @@ AI model requests (`google/gemini-3-flash`) are routed through the Vercel AI Gat
 - TypeScript strict mode enabled; `ignoreBuildErrors: true` in next.config.mjs
 - Images are unoptimized in Next.js config (static export compatibility)
 - Vercel Analytics is currently disabled due to a runtime error
+- `proxy.ts`'s matcher must exclude `/.well-known/workflow/`. The platform calls those Workflow SDK routes to run timer pushes, and they stall if the gate redirects or 401s them.
 - `public/sw.js` must never cache navigations or RSC payloads (`?_rsc=` / `RSC` header — client-side navigations aren't `mode: 'navigate'`), or a cached page bypasses the auth gate. It caches only an allowlist of files `proxy.ts` doesn't gate (hashed `/_next/static/`, icons, manifest), and in dev it's registered as `/sw.js?dev` and caches nothing. Bump `CACHE_NAME` when changing its caching behaviour.
 - `ignoreBuildErrors` means `pnpm build` won't catch type errors — run `pnpm exec tsc --noEmit`

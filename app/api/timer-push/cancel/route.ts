@@ -1,40 +1,23 @@
 import { NextResponse } from 'next/server'
-import { Client } from '@upstash/qstash'
-import { createClient } from '@/lib/supabase/server'
+import { getRun } from 'workflow/api'
 import { requireUser } from '@/lib/auth/require-user'
-
-const qstash = new Client({ token: process.env.QSTASH_TOKEN! })
 
 export async function POST(request: Request) {
   const { response: unauthorized } = await requireUser()
   if (unauthorized) return unauthorized
 
   try {
-    const { timerId } = await request.json()
+    const { runId } = await request.json()
 
-    if (!timerId) {
-      return NextResponse.json({ error: 'Missing timerId' }, { status: 400 })
+    if (!runId || typeof runId !== 'string') {
+      return NextResponse.json({ error: 'Missing runId' }, { status: 400 })
     }
 
-    const supabase = await createClient()
-
-    // Look up QStash message ID
-    const { data } = await supabase
-      .from('push_timers')
-      .select('qstash_message_id')
-      .eq('timer_id', timerId)
-      .single()
-
-    if (data?.qstash_message_id) {
-      try {
-        await qstash.messages.delete(data.qstash_message_id)
-      } catch {
-        // Message may have already been delivered or expired
-      }
+    try {
+      await getRun(runId).cancel()
+    } catch {
+      // The run may have already sent its push or been cancelled
     }
-
-    // Delete the row
-    await supabase.from('push_timers').delete().eq('timer_id', timerId)
 
     return NextResponse.json({ ok: true })
   } catch (err) {
