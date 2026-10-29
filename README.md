@@ -79,7 +79,7 @@ The application keeps those outputs behind typed and validated boundaries rather
 | Validation | Zod |
 | Database | Supabase (PostgreSQL) |
 | Push | web-push (VAPID) + Service Worker |
-| Scheduling | QStash |
+| Scheduling | Vercel Workflows |
 | Package Manager | pnpm |
 
 ## Getting started
@@ -172,4 +172,4 @@ scripts/
 
 ## Configuration
 
-Credentials and local environment files are intentionally kept out of source control. Provide your own Supabase, AI Gateway, push, and QStash credentials through environment variables when running or deploying the app.
+Credentials and local environment files are intentionally kept out of source control. Provide your own Supabase, AI Gateway, and push credentials through environment variables when running or deploying the app.

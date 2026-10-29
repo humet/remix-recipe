@@ -71,10 +71,10 @@ export async function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     /*
-     * Everything except static assets, the PWA files, and the QStash webhook
-     * (/api/timer-push/send verifies its own signature server-to-server and
-     * must not be redirected or 401'd).
+     * Everything except static assets, the PWA files, and the Workflow SDK's
+     * routes (/.well-known/workflow/ is called by the platform to run timer
+     * pushes, and runs stall if it's redirected or 401'd).
      */
-    '/((?!_next/static|_next/image|favicon\\.ico|sw\\.js|manifest\\.json|api/timer-push/send|.*\\.(?:png|jpg|jpeg|gif|svg|webp|ico|woff|woff2)$).*)',
+    '/((?!_next/static|_next/image|favicon\\.ico|sw\\.js|manifest\\.json|\\.well-known/workflow/|.*\\.(?:png|jpg|jpeg|gif|svg|webp|ico|woff|woff2)$).*)',
   ],
 }

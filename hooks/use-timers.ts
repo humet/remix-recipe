@@ -10,6 +10,7 @@ export interface Timer {
   remainingSeconds: number
   endsAt: number // wall-clock timestamp (ms) when timer should complete
   pausedRemaining?: number // seconds left when paused (to resume from)
+  pushRunId?: string // workflow run that sends this timer's push
   isRunning: boolean
   isComplete: boolean
 }
@@ -42,24 +43,48 @@ function createBeepSound(audioContext: AudioContext) {
 
 // --- Push notification helpers ---
 
+// Each timer's push is a workflow run that sleeps until the timer ends.
+// Pausing, resetting or removing the timer cancels it by run ID. The map holds
+// the schedule request itself, so a cancel sent before the ID comes back still
+// reaches the run.
+const pushRuns = new Map<string, Promise<string | null>>()
+
 function schedulePush(timerId: string, label: string, seconds: number, subscription: PushSubscription | null) {
   // Demo has no server identity — timers stay purely local.
-  if (isDemoMode() || !subscription) return
+  if (isDemoMode() || !subscription) return null
   const fireAt = new Date(Date.now() + seconds * 1000).toISOString()
-  fetch('/api/timer-push/schedule', {
+  const pending = fetch('/api/timer-push/schedule', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ timerId, label, fireAt, subscription: subscription.toJSON() }),
-  }).catch((err) => console.error('Failed to schedule push:', err))
+  })
+    .then((res) => (res.ok ? res.json() : null))
+    .then((data: { runId?: string } | null) => data?.runId ?? null)
+    .catch((err) => {
+      console.error('Failed to schedule push:', err)
+      return null
+    })
+  pushRuns.set(timerId, pending)
+  return pending
 }
 
 function cancelPush(timerId: string) {
   if (isDemoMode()) return
-  fetch('/api/timer-push/cancel', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ timerId }),
-  }).catch((err) => console.error('Failed to cancel push:', err))
+  // Taken synchronously, so a reset cancels the old run before the new
+  // schedule replaces it.
+  const pending = pushRuns.get(timerId)
+  if (!pending) return
+  pushRuns.delete(timerId)
+  pending
+    .then((runId) => {
+      if (!runId) return
+      return fetch('/api/timer-push/cancel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ runId }),
+      })
+    })
+    .catch((err) => console.error('Failed to cancel push:', err))
 }
 
 export interface TimerPersistence {
@@ -86,6 +111,13 @@ export function useTimers(pushSubscription?: PushSubscription | null, persistenc
   useEffect(() => {
     if (!persistence || !persistEnabled || loaded) return
     const restored = persistence.load()
+    // A relaunch loses the in-memory runs; without these, pausing a restored
+    // timer couldn't cancel its push.
+    for (const t of restored) {
+      if (t.pushRunId && t.isRunning && !t.isComplete && !pushRuns.has(t.id)) {
+        pushRuns.set(t.id, Promise.resolve(t.pushRunId))
+      }
+    }
     if (restored.length > 0) setTimers(prev => [...restored, ...prev.filter(t => !restored.some(r => r.id === t.id))])
     setLoaded(true)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -252,6 +284,17 @@ export function useTimers(pushSubscription?: PushSubscription | null, persistenc
     return totalSeconds
   }
 
+  // Schedules the push and records its run ID on the timer, so it survives a
+  // relaunch along with the rest of the timer.
+  const startPush = useCallback((id: string, label: string, seconds: number, subscription: PushSubscription | null) => {
+    const pending = schedulePush(id, label, seconds, subscription)
+    pending?.then((runId) => {
+      // Skip it if the push was cancelled or replaced while scheduling.
+      if (!runId || pushRuns.get(id) !== pending) return
+      setTimers(prev => prev.map(t => t.id === id ? { ...t, pushRunId: runId } : t))
+    })
+  }, [])
+
   const addTimer = useCallback((label: string, timeString: string, subscriptionOverride?: PushSubscription | null) => {
     const seconds = parseTimeString(timeString)
     if (seconds <= 0) return null
@@ -276,10 +319,10 @@ export function useTimers(pushSubscription?: PushSubscription | null, persistenc
 
     // Schedule push notification — prefer override (from fresh subscribe) over stale closure value
     const sub = subscriptionOverride ?? pushSubscription ?? null
-    schedulePush(id, label, seconds, sub)
+    startPush(id, label, seconds, sub)
 
     return id
-  }, [pushSubscription])
+  }, [pushSubscription, startPush])
 
   const pauseTimer = useCallback((id: string) => {
     setTimers(prev => prev.map(t => {
@@ -290,20 +333,17 @@ export function useTimers(pushSubscription?: PushSubscription | null, persistenc
     cancelPush(id)
   }, [])
 
+  // Pushes are scheduled outside the setTimers updaters: StrictMode runs an
+  // updater twice in dev, which would start two runs and orphan one.
   const resumeTimer = useCallback((id: string) => {
-    setTimers(prev => {
-      const updated = prev.map(t => {
-        if (t.id !== id || t.isComplete) return t
-        const remaining = t.pausedRemaining ?? t.remainingSeconds
-        return { ...t, isRunning: true, endsAt: Date.now() + remaining * 1000, pausedRemaining: undefined }
-      })
-      const timer = updated.find(t => t.id === id)
-      if (timer && timer.isRunning) {
-        schedulePush(id, timer.label, timer.remainingSeconds, pushSubscription ?? null)
-      }
-      return updated
-    })
-  }, [pushSubscription])
+    const timer = timers.find(t => t.id === id)
+    if (!timer || timer.isComplete) return
+    const remaining = timer.pausedRemaining ?? timer.remainingSeconds
+    setTimers(prev => prev.map(t =>
+      t.id === id ? { ...t, isRunning: true, endsAt: Date.now() + remaining * 1000, pausedRemaining: undefined, pushRunId: undefined } : t
+    ))
+    startPush(id, timer.label, remaining, pushSubscription ?? null)
+  }, [timers, pushSubscription, startPush])
 
   const removeTimer = useCallback((id: string) => {
     setTimers(prev => prev.filter(t => t.id !== id))
@@ -317,17 +357,15 @@ export function useTimers(pushSubscription?: PushSubscription | null, persistenc
   }, [timers])
 
   const resetTimer = useCallback((id: string) => {
-    setTimers(prev => {
-      const updated = prev.map(t =>
-        t.id === id ? { ...t, remainingSeconds: t.totalSeconds, endsAt: Date.now() + t.totalSeconds * 1000, isComplete: false, isRunning: true, pausedRemaining: undefined } : t
-      )
-      const timer = updated.find(t => t.id === id)
-      if (timer) {
-        schedulePush(id, timer.label, timer.totalSeconds, pushSubscription ?? null)
-      }
-      return updated
-    })
-  }, [pushSubscription])
+    const timer = timers.find(t => t.id === id)
+    if (!timer) return
+    setTimers(prev => prev.map(t =>
+      t.id === id ? { ...t, remainingSeconds: t.totalSeconds, endsAt: Date.now() + t.totalSeconds * 1000, isComplete: false, isRunning: true, pausedRemaining: undefined, pushRunId: undefined } : t
+    ))
+    // Otherwise the old run still alerts at the original time.
+    cancelPush(id)
+    startPush(id, timer.label, timer.totalSeconds, pushSubscription ?? null)
+  }, [timers, pushSubscription, startPush])
 
   return {
     timers,

@@ -1,9 +1,7 @@
 import { NextResponse } from 'next/server'
-import { Client } from '@upstash/qstash'
-import { createClient } from '@/lib/supabase/server'
+import { start } from 'workflow/api'
 import { requireUser } from '@/lib/auth/require-user'
-
-const qstash = new Client({ token: process.env.QSTASH_TOKEN! })
+import { timerPushWorkflow } from '@/workflows/timer-push'
 
 export async function POST(request: Request) {
   const { response: unauthorized } = await requireUser()
@@ -16,34 +14,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    // Calculate delay in seconds
-    const delaySeconds = Math.max(0, Math.round((new Date(fireAt).getTime() - Date.now()) / 1000))
+    // The run sends from this deployment, so a preview's timers open the preview.
+    const appUrl = new URL(request.url).origin
 
-    // Use production URL to avoid Vercel deployment protection on preview URLs
-    const baseUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL
-      ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
-      : 'http://localhost:3000'
+    const run = await start(timerPushWorkflow, [{ timerId, label, fireAt, subscription, appUrl }])
 
-    // Schedule QStash message to call /api/timer-push/send at fire_at
-    const { messageId } = await qstash.publishJSON({
-      url: `${baseUrl}/api/timer-push/send`,
-      body: { timerId, label, subscription, appUrl: baseUrl },
-      delay: delaySeconds,
-    })
-
-    // Store timer_id → qstash_message_id mapping for cancellation
-    const supabase = await createClient()
-    await supabase.from('push_timers').upsert(
-      {
-        timer_id: timerId,
-        qstash_message_id: messageId,
-        label,
-        fire_at: fireAt,
-      },
-      { onConflict: 'timer_id' }
-    )
-
-    return NextResponse.json({ ok: true })
+    return NextResponse.json({ ok: true, runId: run.runId })
   } catch (err) {
     console.error('Schedule push error:', err)
     return NextResponse.json({ error: 'Internal error' }, { status: 500 })
